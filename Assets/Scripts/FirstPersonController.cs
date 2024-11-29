@@ -4,19 +4,26 @@ using UnityEngine;
 public class FPSController : MonoBehaviour
 {
     [Header("Player Settings")]
-    public float moveSpeed = 5f;
+    public float walkSpeed = 5f;
+    public float runSpeed = 10f;
     public float jumpHeight = 2f;
-    public float gravity = -9.81f;
-    public float mouseSensitivity = 1f;
+    public float gravity = -15f;
 
     [Header("Camera Settings")]
     public Transform cameraTransform;
+    public float mouseSensitivity = 1f;
     public float maxLookAngle = 90f;
 
     private CharacterController characterController;
     private InputActions inputActions;
     private Vector3 velocity;
     private float cameraPitch = 0f;
+
+    // Ajout pour fiabiliser le saut
+    private bool isGrounded = false;
+    private bool canJump = false;
+    private float groundCheckDelay = 0.2f; // Délai de tolérance au sol
+    private float lastGroundedTime;
 
     void Awake()
     {
@@ -37,54 +44,74 @@ public class FPSController : MonoBehaviour
     void Update()
     {
         HandleMovement();
-        HandleLook();
-        HandleGravity();
+        HandleCameraRotation();
+        ApplyGravityAndJump();
     }
 
     private void HandleMovement()
     {
-        // Récupérer l'entrée pour les déplacements (ZQSD)
-        Vector2 input = inputActions.Character.Move.ReadValue<Vector2>();
+        Vector2 moveInput = inputActions.Character.Move.ReadValue<Vector2>();
+        bool isRunning = inputActions.Character.Run.IsPressed();
+        float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
-        // Calculer la direction du mouvement en utilisant la caméra, mais ignorer l'axe Y
         Vector3 forward = new Vector3(cameraTransform.forward.x, 0, cameraTransform.forward.z).normalized;
         Vector3 right = new Vector3(cameraTransform.right.x, 0, cameraTransform.right.z).normalized;
+        Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
 
-        // Appliquer les directions au mouvement
-        Vector3 move = forward * input.y + right * input.x;
-
-        // Déplacer la capsule
-        characterController.Move(move * moveSpeed * Time.deltaTime);
+        characterController.Move(moveDirection * currentSpeed * Time.deltaTime);
     }
 
-    private void HandleLook()
+    private void HandleCameraRotation()
     {
-        // Gestion de la rotation de la caméra avec la souris
-        Vector2 lookInput = inputActions.Character.Look.ReadValue<Vector2>() * mouseSensitivity;
+        Vector2 lookInput = inputActions.Character.Look.ReadValue<Vector2>();
+        transform.Rotate(Vector3.up * lookInput.x * mouseSensitivity);
 
-        // Rotation horizontale du joueur
-        float horizontalRotation = lookInput.x;
-        transform.Rotate(Vector3.up * horizontalRotation); // Rotation sur l'axe Y seulement
-
-        // Rotation verticale de la caméra
-        cameraPitch -= lookInput.y;
-        cameraPitch = Mathf.Clamp(cameraPitch, -maxLookAngle, maxLookAngle); // Limiter l'angle vertical
-        cameraTransform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+        cameraPitch -= lookInput.y * mouseSensitivity;
+        cameraPitch = Mathf.Clamp(cameraPitch, -maxLookAngle, maxLookAngle);
+        cameraTransform.localRotation = Quaternion.Euler(cameraPitch, 0, 0);
     }
 
-    private void HandleGravity()
+    private void ApplyGravityAndJump()
     {
+        // Vérification au sol avec tolérance
         if (characterController.isGrounded)
         {
-            velocity.y = 0f;
+            isGrounded = true;
+            lastGroundedTime = Time.time; // Enregistrer le dernier moment où le joueur était au sol
+            velocity.y = -2f; // Petite vélocité descendante pour rester stable
 
-            if (inputActions.Character.Jump.triggered)
+            // Activer la possibilité de sauter
+            canJump = true;
+        }
+        else
+        {
+            // Vérifier si le joueur était récemment au sol
+            if (Time.time - lastGroundedTime <= groundCheckDelay)
             {
-                velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                isGrounded = true; // Toujours considéré au sol
+            }
+            else
+            {
+                isGrounded = false;
+                canJump = false; // Empêcher de sauter en l'air
             }
         }
 
-        velocity.y += gravity * Time.deltaTime;
-        characterController.Move(velocity * Time.deltaTime);
+        // Gestion du saut
+        if (canJump && inputActions.Character.Jump.triggered)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            isGrounded = false; // Forcer l'état aérien
+            canJump = false;    // Désactiver temporairement le saut
+        }
+
+        // Appliquer la gravité si le joueur est en l'air
+        if (!isGrounded)
+        {
+            velocity.y += gravity * Time.deltaTime;
+        }
+
+        // Appliquer le mouvement vertical
+        characterController.Move(Vector3.up * velocity.y * Time.deltaTime);
     }
 }

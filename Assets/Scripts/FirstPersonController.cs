@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class FPSController : MonoBehaviour
@@ -6,8 +7,10 @@ public class FPSController : MonoBehaviour
     [Header("Player Settings")]
     public float walkSpeed = 5f;
     public float runSpeed = 10f;
-    public float jumpHeight = 2f;
-    public float gravity = -15f;
+    public float jumpHeight = 1.5f; // Hauteur du saut en mode marche
+    public float runJumpHeight = 1f; // Hauteur du saut en mode course
+    public float gravity = -20f; // Gravité modérée
+    public float fallMultiplier = 2f; // Accélération pendant la descente
 
     [Header("Camera Settings")]
     public Transform cameraTransform;
@@ -19,16 +22,18 @@ public class FPSController : MonoBehaviour
     private Vector3 velocity;
     private float cameraPitch = 0f;
 
-    // Ajout pour fiabiliser le saut
-    private bool isGrounded = false;
-    private bool canJump = false;
-    private float groundCheckDelay = 0.2f; // Délai de tolérance au sol
-    private float lastGroundedTime;
+    // Gestion du curseur
+    private bool isCursorLocked = true;
 
     void Awake()
     {
         characterController = GetComponent<CharacterController>();
         inputActions = new InputActions();
+    }
+
+    void Start()
+    {
+        LockCursor(); // Verrouiller le curseur dès le début
     }
 
     void OnEnable()
@@ -43,9 +48,14 @@ public class FPSController : MonoBehaviour
 
     void Update()
     {
-        HandleMovement();
-        HandleCameraRotation();
-        ApplyGravityAndJump();
+        HandleCursorLock(); // Gérer le verrouillage du curseur
+
+        if (isCursorLocked)
+        {
+            HandleMovement();
+            HandleCameraRotation();
+            ApplyGravityAndJump();
+        }
     }
 
     private void HandleMovement()
@@ -58,6 +68,7 @@ public class FPSController : MonoBehaviour
         Vector3 right = new Vector3(cameraTransform.right.x, 0, cameraTransform.right.z).normalized;
         Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
 
+        moveDirection.y = velocity.y; // Inclure la vélocité verticale dans le déplacement
         characterController.Move(moveDirection * currentSpeed * Time.deltaTime);
     }
 
@@ -73,45 +84,71 @@ public class FPSController : MonoBehaviour
 
     private void ApplyGravityAndJump()
     {
-        // Vérification au sol avec tolérance
-        if (characterController.isGrounded)
-        {
-            isGrounded = true;
-            lastGroundedTime = Time.time; // Enregistrer le dernier moment où le joueur était au sol
-            velocity.y = -2f; // Petite vélocité descendante pour rester stable
+        bool isGrounded = characterController.isGrounded;
 
-            // Activer la possibilité de sauter
-            canJump = true;
+        if (isGrounded)
+        {
+            velocity.y = -2f; // Légère pression vers le bas pour stabiliser le joueur au sol
+
+            if (inputActions.Character.Jump.triggered)
+            {
+                // Vérifier si le joueur court
+                bool isRunning = inputActions.Character.Run.IsPressed();
+
+                // Calculer la hauteur du saut en fonction de l'état
+                if (isRunning)
+                {
+                    velocity.y = Mathf.Sqrt(runJumpHeight * -2f * gravity); // Saut plus bas
+                }
+                else
+                {
+                    velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity); // Saut normal
+                }
+            }
         }
         else
         {
-            // Vérifier si le joueur était récemment au sol
-            if (Time.time - lastGroundedTime <= groundCheckDelay)
+            if (velocity.y < 0)
             {
-                isGrounded = true; // Toujours considéré au sol
+                // Appliquer une gravité amplifiée en descente
+                velocity.y += gravity * fallMultiplier * Time.deltaTime;
             }
             else
             {
-                isGrounded = false;
-                canJump = false; // Empêcher de sauter en l'air
+                // Appliquer une gravité normale en montée
+                velocity.y += gravity * Time.deltaTime;
             }
         }
 
-        // Gestion du saut
-        if (canJump && inputActions.Character.Jump.triggered)
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            isGrounded = false; // Forcer l'état aérien
-            canJump = false;    // Désactiver temporairement le saut
-        }
-
-        // Appliquer la gravité si le joueur est en l'air
-        if (!isGrounded)
-        {
-            velocity.y += gravity * Time.deltaTime;
-        }
-
-        // Appliquer le mouvement vertical
         characterController.Move(Vector3.up * velocity.y * Time.deltaTime);
+    }
+
+    private void LockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked; // Verrouiller le curseur
+        Cursor.visible = false; // Masquer le curseur
+        isCursorLocked = true;
+    }
+
+    private void UnlockCursor()
+    {
+        Cursor.lockState = CursorLockMode.None; // Déverrouiller le curseur
+        Cursor.visible = true; // Rendre le curseur visible
+        isCursorLocked = false;
+    }
+
+    private void HandleCursorLock()
+    {
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            if (isCursorLocked)
+            {
+                UnlockCursor();
+            }
+            else
+            {
+                LockCursor();
+            }
+        }
     }
 }

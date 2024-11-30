@@ -228,8 +228,7 @@ MonoBehaviour:
   openSpeed: 2
   interactKey: e
   interactionDistance: 3
-  playerTransform: {fileID: 0}
-  interactionPrompt: {fileID: 0}
+  interactionPromptPrefab: {fileID: 0}
 --- !u!1 &2691416973203281771
 GameObject:
   m_ObjectHideFlags: 0
@@ -359,7 +358,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c3213542af0644d48b671532ad7ea62e, type: 2}
+  - {fileID: 2100000, guid: 7a8c010dc3891f843bdeda56c6fe4a60, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -464,7 +463,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c3213542af0644d48b671532ad7ea62e, type: 2}
+  - {fileID: 2100000, guid: 7a8c010dc3891f843bdeda56c6fe4a60, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

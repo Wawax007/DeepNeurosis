@@ -50,13 +50,12 @@ public class RoomGenerator : MonoBehaviour
             yield break;
         }
 
-        // Génération des murs/portes/fenêtres de chaque côté de la salle
         if (!isNorthWallInstantiated && emplacement_N.childCount == 0)
         {
             isNorthWallInstantiated = true;
             InstantiateWall(
                 northDoor ? wallWithDoorPrefab : (isNorthExternal ? GetRandomExternalWall() : wallPrefab),
-                emplacement_N.position, emplacement_N.rotation, isNorthExternal);
+                emplacement_N.position, emplacement_N.rotation, isNorthExternal, emplacement_N);
         }
 
         if (!isSouthWallInstantiated && emplacement_S.childCount == 0)
@@ -64,7 +63,7 @@ public class RoomGenerator : MonoBehaviour
             isSouthWallInstantiated = true;
             InstantiateWall(
                 southDoor ? wallWithDoorPrefab : (isSouthExternal ? GetRandomExternalWall() : wallPrefab),
-                emplacement_S.position, emplacement_S.rotation, isSouthExternal);
+                emplacement_S.position, emplacement_S.rotation, isSouthExternal, emplacement_S);
         }
 
         if (!isEastWallInstantiated && emplacement_E.childCount == 0)
@@ -72,7 +71,7 @@ public class RoomGenerator : MonoBehaviour
             isEastWallInstantiated = true;
             InstantiateWall(
                 eastDoor ? wallWithDoorPrefab : (isEastExternal ? GetRandomExternalWall() : wallPrefab),
-                emplacement_E.position, emplacement_E.rotation, isEastExternal);
+                emplacement_E.position, emplacement_E.rotation, isEastExternal, emplacement_E);
         }
 
         if (!isWestWallInstantiated && emplacement_W.childCount == 0)
@@ -80,7 +79,7 @@ public class RoomGenerator : MonoBehaviour
             isWestWallInstantiated = true;
             InstantiateWall(
                 westDoor ? wallWithDoorPrefab : (isWestExternal ? GetRandomExternalWall() : wallPrefab),
-                emplacement_W.position, emplacement_W.rotation, isWestExternal);
+                emplacement_W.position, emplacement_W.rotation, isWestExternal, emplacement_W);
         }
     }
 
@@ -89,10 +88,10 @@ public class RoomGenerator : MonoBehaviour
         return Random.value < 0.7f ? wallWithWindowPrefab : wallPrefab;
     }
 
-    private void InstantiateWall(GameObject wallPrefab, Vector3 position, Quaternion rotation, bool isExternalWall)
+    private void InstantiateWall(GameObject wallPrefab, Vector3 position, Quaternion rotation, bool isExternalWall, Transform emplacement)
     {
-        // Si le mur est externe (avec fenêtre) et positionné au Nord ou au Sud, on applique une rotation de 180°
-        if (isExternalWall && wallPrefab == wallWithWindowPrefab)
+        // Si le mur est externe (avec fenêtre) et positionné au Sud ou à l'Ouest, on applique une rotation de 180°
+        if (isExternalWall && wallPrefab == wallWithWindowPrefab && (emplacement == emplacement_S || emplacement == emplacement_W))
         {
             rotation = Quaternion.Euler(rotation.eulerAngles.x, rotation.eulerAngles.y + 180, rotation.eulerAngles.z);
         }

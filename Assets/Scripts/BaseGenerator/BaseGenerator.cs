@@ -21,7 +21,8 @@ public class BaseGenerator : MonoBehaviour
 
     IEnumerator GenerateMap()
     {
-        Vector2 startPosition = Vector2.zero;
+        // Modifier la position de départ à (200, 0) pour eviter le volume underwater
+        Vector2 startPosition = new Vector2(200f / roomSize, 0f); // Diviser par roomSize pour correspondre à l'unité logique
         Debug.Log($"Generating the first room at {startPosition}");
 
         GameObject startRoom = InstantiateRoom(startPosition);

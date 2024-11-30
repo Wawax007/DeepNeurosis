@@ -324,6 +324,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   wallPrefab: {fileID: 4756039552149760683, guid: 69f0db08863915e4d8cededb1f9c9f41, type: 3}
   wallWithDoorPrefab: {fileID: 3384807444908844683, guid: 2cdba244f3c562146a10fbb95798cb61, type: 3}
+  wallWithWindowPrefab: {fileID: 6502689685345960176, guid: 47cca818d2a845f4f93d0b2c51f367bb, type: 3}
   isNorthWallInstantiated: 0
   isSouthWallInstantiated: 0
   isEastWallInstantiated: 0

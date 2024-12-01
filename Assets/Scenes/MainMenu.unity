@@ -7648,6 +7648,38 @@ PrefabInstance:
       propertyPath: m_Name
       value: UnderWater
       objectReference: {fileID: 0}
+    - target: {fileID: 3785354238681297147, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.6524838
+      objectReference: {fileID: 0}
+    - target: {fileID: 3785354238681297147, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.7578027
+      objectReference: {fileID: 0}
+    - target: {fileID: 3785354238681297147, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -98.542
+      objectReference: {fileID: 0}
+    - target: {fileID: 4894736514772882191, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.65248203
+      objectReference: {fileID: 0}
+    - target: {fileID: 4894736514772882191, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4894736514772882191, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.7578042
+      objectReference: {fileID: 0}
+    - target: {fileID: 4894736514772882191, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4894736514772882191, guid: 3964af92383ec094bb0bfb40fdc83bba, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -98.542
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

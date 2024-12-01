@@ -90,15 +90,21 @@ public class RoomGenerator : MonoBehaviour
 
     private void InstantiateWall(GameObject wallPrefab, Vector3 position, Quaternion rotation, bool isExternalWall, Transform emplacement)
     {
-        // Si le mur est externe (avec fenêtre) et positionné au Sud ou à l'Ouest, on applique une rotation de 180°
+        // Si le mur est plein (pas de fenêtre ou porte), on applique une rotation de 180° sur l'axe Y
+        if (wallPrefab == this.wallPrefab && (emplacement == emplacement_N || emplacement == emplacement_E))
+        {
+            rotation = Quaternion.Euler(rotation.eulerAngles.x, rotation.eulerAngles.y + 180, rotation.eulerAngles.z);
+        }
+
+        // Si le mur est externe (avec fenêtre) et positionné au Sud ou à l'Ouest, on applique une rotation de 180° supplémentaire
         if (isExternalWall && wallPrefab == wallWithWindowPrefab && (emplacement == emplacement_S || emplacement == emplacement_W))
         {
             rotation = Quaternion.Euler(rotation.eulerAngles.x, rotation.eulerAngles.y + 180, rotation.eulerAngles.z);
         }
 
+        // Instanciation finale du mur
         Instantiate(wallPrefab, position, rotation, transform);
     }
-
     public bool IsWallInstantiated(int wallIndex)
     {
         switch (wallIndex)

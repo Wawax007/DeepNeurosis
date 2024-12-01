@@ -322,9 +322,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69e7db294d2db8e4d8e8db3bd5c60fc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wallPrefab: {fileID: 4756039552149760683, guid: 69f0db08863915e4d8cededb1f9c9f41, type: 3}
+  wallPrefab: {fileID: 5193512152685470824, guid: 6c794b381792a7245978bd3f48471972, type: 3}
   wallWithDoorPrefab: {fileID: 3384807444908844683, guid: 2cdba244f3c562146a10fbb95798cb61, type: 3}
-  wallWithWindowPrefab: {fileID: 6502689685345960176, guid: 47cca818d2a845f4f93d0b2c51f367bb, type: 3}
+  wallWithWindowPrefab: {fileID: 4879976832194647901, guid: 48d6df34bb02c334bb1af71b1d54b1f6, type: 3}
   isNorthWallInstantiated: 0
   isSouthWallInstantiated: 0
   isEastWallInstantiated: 0

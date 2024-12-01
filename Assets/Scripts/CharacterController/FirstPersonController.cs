@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
-public class FPSController : MonoBehaviour
+public class FirstPersonController : MonoBehaviour
 {
     [Header("Player Settings")]
     public float walkSpeed = 5f;
@@ -21,6 +21,9 @@ public class FPSController : MonoBehaviour
     private InputActions inputActions;
     private Vector3 velocity;
     private float cameraPitch = 0f;
+    
+    [Header("Footstep Manager")]
+    public FootstepManager footstepManager;
 
     // Gestion du curseur
     private bool isCursorLocked = true;
@@ -68,8 +71,14 @@ public class FPSController : MonoBehaviour
         Vector3 right = new Vector3(cameraTransform.right.x, 0, cameraTransform.right.z).normalized;
         Vector3 moveDirection = forward * moveInput.y + right * moveInput.x;
 
-        moveDirection.y = velocity.y; // Inclure la vélocité verticale dans le déplacement
+        moveDirection.y = velocity.y;
         characterController.Move(moveDirection * currentSpeed * Time.deltaTime);
+
+        // Appeler le gestionnaire de sons si le joueur bouge et est au sol
+        if (characterController.velocity.magnitude > 0.1f && characterController.isGrounded)
+        {
+            footstepManager.PlayFootstep(isRunning);
+        }
     }
 
     private void HandleCameraRotation()

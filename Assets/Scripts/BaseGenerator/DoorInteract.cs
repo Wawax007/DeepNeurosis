@@ -12,6 +12,10 @@ public class DoorInteract : MonoBehaviour
     public float interactionDistance = 3f; // Distance à laquelle le joueur peut interagir
     public GameObject interactionPromptPrefab; // Préfab pour l'indication visuelle d'interaction
 
+    [Header("Audio Settings")]
+    public AudioSource doorAudioSource; // Composant AudioSource attaché à la porte
+    public AudioClip doorOpenSound; // Son à jouer lorsque la porte s'ouvre
+
     private Transform playerTransform; // Transform du joueur (trouvé dynamiquement)
     private GameObject interactionPrompt; // Instance de l'indication visuelle
     private bool isDoorOpen = false;
@@ -76,6 +80,11 @@ public class DoorInteract : MonoBehaviour
     private void ToggleDoor()
     {
         isDoorOpen = !isDoorOpen; // Alterne entre ouvert et fermé
+        
+        if (isDoorOpen && doorAudioSource != null && doorOpenSound != null)
+        {
+            doorAudioSource.PlayOneShot(doorOpenSound); // Joue le son d'ouverture
+        }
     }
 
     private void UpdateDoorRotation()

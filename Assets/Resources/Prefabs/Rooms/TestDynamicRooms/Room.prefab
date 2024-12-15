@@ -282,6 +282,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1488463152976787504}
   - component: {fileID: 3103151667787125879}
+  - component: {fileID: 6345735637194172154}
   m_Layer: 0
   m_Name: Room
   m_TagString: Untagged
@@ -329,6 +330,27 @@ MonoBehaviour:
   isSouthWallInstantiated: 0
   isEastWallInstantiated: 0
   isWestWallInstantiated: 0
+--- !u!114 &6345735637194172154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8592167135614004760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fa56d5d5f16cd64ba32d16328cc941e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wallPrefabsWithDoor:
+  - {fileID: 3384807444908844683, guid: 80d1d68e828a03645a48662408b93d5e, type: 3}
+  wallPrefabsNoDoor:
+  - {fileID: 4756039552149760683, guid: c8b7e96a31016424a86ed54b7af8da63, type: 3}
+  roomDimensions: {x: 50, y: 0.1, z: 50}
+  partitionDimensions: {x: 10, y: 6, z: 0.1}
+  minPartitions: 5
+  maxPartitions: 10
+  wallOffsetFromBorder: 2
 --- !u!1 &9023534684671355136
 GameObject:
   m_ObjectHideFlags: 0

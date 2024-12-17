@@ -17,9 +17,9 @@ TagManager:
   - UI
   - Post
   - Walkable
-  - 
-  - 
-  - 
+  - InteractableProximity
+  - PhysicsProps
+  - Player
   - 
   - 
   - 

@@ -1,6 +1,7 @@
-using UnityEngine;
+using UnityEngine; 
 using UnityEngine.AI;
 using System.Collections.Generic;
+using PlayerScripts;
 
 public class MobAI : MonoBehaviour
 {
@@ -15,7 +16,7 @@ public class MobAI : MonoBehaviour
 
     [Header("References")]
     private NavMeshAgent agent;
-    private Animator animator; // Référence à l'Animator
+    private Animator animator;
     public Transform player;
 
     [Header("Patrol Settings")]
@@ -34,28 +35,33 @@ public class MobAI : MonoBehaviour
     public float patrolSpeed = 2f;
     public float suspicionSpeed = 3f;
 
+    [Header("Attack Settings")]
+    private bool isAttacking = false;
+    public float attackDelay = 2f;
+
     [Header("Search Settings")]
     private Vector3 lastKnownPosition;
     private bool isPlayerSeen = false;
     private float searchTimer = 0f;
-    private float searchDuration = 10f;
+    public float searchDuration = 10f;
     private List<Vector3> searchPoints = new List<Vector3>();
-    private int currentSearchIndex = 0;
+    private int currentSearchIndex = -1;
+
+    // On retire toute la logique de rotation sur place
+    // On garde maxTimeToReachTarget pour abandonner si on n’atteint pas la destination
+    private float searchStartTime = 0f;
+    private float maxTimeToReachTarget = 3f;
 
     [Header("Suspicion Settings")]
     public float suspicionTime = 2f;
     private float suspiciousTimer = 0f;
-
-    [Header("Attack Settings")]
-    private bool isAttacking = false;
-    public float attackDelay = 2f;
 
     public MobState currentState = MobState.Patrolling;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        animator = GetComponent<Animator>(); // Initialise l'Animator
+        animator = GetComponent<Animator>();
         agent.speed = patrolSpeed;
         GoToNextPatrolPoint();
     }
@@ -68,13 +74,23 @@ public class MobAI : MonoBehaviour
                 Patrol();
                 if (CanDetectPlayer())
                 {
+                    Debug.Log("Joueur détecté en patrouille, passage en Suspicious");
                     currentState = MobState.Suspicious;
                     suspiciousTimer = 0f;
                     agent.speed = suspicionSpeed;
+                    return;
                 }
                 break;
 
             case MobState.Suspicious:
+                if (CanDetectPlayer())
+                {
+                    Debug.Log("Joueur détecté en Suspicious, passage en Chasing");
+                    lastKnownPosition = player.position;
+                    currentState = MobState.Chasing;
+                    agent.speed = chaseSpeed;
+                    return;
+                }
                 BeSuspicious();
                 break;
 
@@ -83,6 +99,14 @@ public class MobAI : MonoBehaviour
                 break;
 
             case MobState.Searching:
+                if (CanDetectPlayer())
+                {
+                    Debug.Log("Joueur détecté en Searching, passage en Chasing");
+                    lastKnownPosition = player.position;
+                    currentState = MobState.Chasing;
+                    agent.speed = chaseSpeed;
+                    return; 
+                }
                 SearchForPlayer();
                 break;
 
@@ -91,12 +115,11 @@ public class MobAI : MonoBehaviour
                 break;
         }
 
-        UpdateAnimator(); // Synchronise l'animation avec la vitesse de déplacement
+        UpdateAnimator();
     }
 
     private void UpdateAnimator()
     {
-        // Met à jour l'animation en fonction de la vitesse actuelle
         float currentSpeed = agent.velocity.magnitude;
         animator.SetFloat("Speed", currentSpeed);
     }
@@ -117,26 +140,27 @@ public class MobAI : MonoBehaviour
         if (patrolPoints.Length == 0) return;
         agent.destination = patrolPoints[currentPatrolIndex].position;
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+        Debug.Log("Patrouille vers le point: " + currentPatrolIndex);
     }
 
     private void BeSuspicious()
     {
         agent.isStopped = true;
-        animator.SetFloat("Speed", 0); // Animation Idle
         suspiciousTimer += Time.deltaTime;
 
-        transform.Rotate(Vector3.up, 60f * Time.deltaTime);
+        // Le mob reste simplement en place, pas besoin de rotation
+        // On pourrait lui faire regarder autour ou rester immobile
 
-        if (CanSeePlayer())
+        if (suspiciousTimer >= suspicionTime)
         {
-            lastKnownPosition = player.position;
-            currentState = MobState.Chasing;
-            agent.speed = chaseSpeed;
-        }
-        else if (suspiciousTimer >= suspicionTime)
-        {
+            Debug.Log("Suspicion terminée, passage en Searching");
+            if (!isPlayerSeen)
+            {
+                lastKnownPosition = transform.position;
+            }
             currentState = MobState.Searching;
-            PrepareSearchArea();
+            PrepareInitialSearch();
+            return;
         }
     }
 
@@ -145,121 +169,247 @@ public class MobAI : MonoBehaviour
         agent.isStopped = false;
         agent.speed = chaseSpeed;
         agent.destination = player.position;
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        Debug.Log("Chasing le joueur, dist=" + distanceToPlayer + " pathStatus=" + agent.pathStatus);
+
+        if (!agent.pathPending && distanceToPlayer <= agent.stoppingDistance)
+        {
+            Debug.Log("A portée d'attaque, passage en Attacking");
+            currentState = MobState.Attacking;
+            return;
+        }
 
         if (!CanSeePlayer())
         {
+            Debug.Log("Joueur perdu de vue, passage en Searching");
+            isPlayerSeen = false;
             lastKnownPosition = player.position;
             currentState = MobState.Searching;
-            PrepareSearchArea();
+            PrepareInitialSearch();
+            return;
+        }
+        else
+        {
+            lastKnownPosition = player.position;
+            isPlayerSeen = true;
         }
     }
 
-    private void PrepareSearchArea()
+    private void PrepareInitialSearch()
     {
+        Debug.Log("Préparation initiale de la recherche");
         searchTimer = 0f;
         searchPoints.Clear();
+        currentSearchIndex = -1; 
+        agent.isStopped = false;
+
+        // On conserve la vitesse de chasse pour courir jusqu'au dernier point vu
+        agent.speed = chaseSpeed;
+
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(lastKnownPosition, out hit, 2f, NavMesh.AllAreas))
+        {
+            Vector3 navigablePos = hit.position;
+            agent.destination = navigablePos;
+            Debug.Log("Position navigable trouvée pour la recherche: " + navigablePos);
+        }
+        else
+        {
+            Debug.LogWarning("lastKnownPosition non navigable, on génère directement les points de recherche");
+            GenerateSearchPoints(); // On génère directement les points si pas navigable
+        }
+
+        searchStartTime = Time.time;
+    }
+
+    private void GenerateSearchPoints()
+    {
+        Debug.Log("Génération de points de recherche supplémentaires (zone encore plus élargie)");
+        searchPoints.Clear();
+        // On élargit encore plus la zone, par exemple 15f
         for (int i = 0; i < 3; i++)
         {
-            Vector3 randomOffset = Random.insideUnitSphere * 3f;
+            Vector3 randomOffset = Random.insideUnitSphere * 15f; 
             randomOffset.y = 0;
             searchPoints.Add(lastKnownPosition + randomOffset);
         }
         currentSearchIndex = 0;
+        agent.isStopped = false;
+        agent.destination = searchPoints[currentSearchIndex];
+        Debug.Log("Point de recherche initial: " + searchPoints[currentSearchIndex]);
+    }
 
-        if (searchPoints.Count > 0)
+    private void GoToNextSearchPoint()
+    {
+        currentSearchIndex++;
+        if (currentSearchIndex < searchPoints.Count)
         {
+            Debug.Log("Passage au point de recherche suivant: " + currentSearchIndex);
+            agent.isStopped = false;
             agent.destination = searchPoints[currentSearchIndex];
+        }
+        else
+        {
+            Debug.Log("Aucun joueur trouvé, retour à la patrouille");
+            ResetToPatrol();
         }
     }
 
     private void SearchForPlayer()
     {
-        agent.speed = patrolSpeed;
         searchTimer += Time.deltaTime;
-
-        if (CanSeePlayer())
-        {
-            currentState = MobState.Chasing;
-            return;
-        }
-
-        if (!agent.pathPending && agent.remainingDistance < 0.5f)
-        {
-            currentSearchIndex++;
-            if (currentSearchIndex < searchPoints.Count)
-            {
-                agent.destination = searchPoints[currentSearchIndex];
-            }
-            else
-            {
-                ResetToPatrol();
-            }
-        }
 
         if (searchTimer >= searchDuration)
         {
+            Debug.Log("Temps de recherche écoulé, retour à la patrouille");
             ResetToPatrol();
+            return;
+        }
+
+        Debug.Log("SearchForPlayer: pathStatus=" + agent.pathStatus + " remainingDistance=" + agent.remainingDistance);
+
+        // Si après un certain temps on n'arrive pas à destination, on génère directement les points
+        if (currentSearchIndex == -1) 
+        {
+            // On est dans la phase initiale (on va vers lastKnownPosition)
+            if (!agent.pathPending && agent.remainingDistance > 0.5f && (Time.time - searchStartTime > maxTimeToReachTarget))
+            {
+                Debug.LogWarning("Impossible d'atteindre la destination initiale, on génère les points");
+                GenerateSearchPoints();
+            }
+            else if (!agent.pathPending && agent.remainingDistance < 0.5f)
+            {
+                // Arrivé au dernier point vu
+                Debug.Log("Arrivé au dernier point connu, génération des points de recherche");
+                GenerateSearchPoints();
+            }
+        }
+        else
+        {
+            // On est dans la phase des points de recherche
+            if (!agent.pathPending && agent.remainingDistance < 0.5f)
+            {
+                // Arrivé à un point de recherche, passe au suivant
+                GoToNextSearchPoint();
+            }
         }
     }
 
     private void ResetToPatrol()
     {
+        Debug.Log("Fin de recherche, retour à la patrouille");
         currentState = MobState.Patrolling;
+        agent.isStopped = false;
+        agent.speed = patrolSpeed;
         GoToNextPatrolPoint();
     }
 
     private void AttackPlayer()
     {
-        if (isAttacking) return;
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
+        if (distanceToPlayer > agent.stoppingDistance)
+        {
+            Debug.Log("Joueur hors de portée, retour en Chasing");
+            currentState = MobState.Chasing;
+            agent.speed = chaseSpeed;
+            return;
+        }
+
+        Vector3 direction = (player.position - transform.position).normalized;
+        direction.y = 0;
+        Quaternion lookRotation = Quaternion.LookRotation(direction);
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+
+        if (isAttacking) return;
         isAttacking = true;
         agent.isStopped = true;
-        animator.SetTrigger("AttackTrigger"); // Animation d'attaque
+        animator.SetTrigger("AttackTrigger");
         Invoke(nameof(EndAttack), attackDelay);
     }
 
     private void EndAttack()
     {
         isAttacking = false;
-        if (CanSeePlayer())
+        agent.isStopped = false;
+
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (distanceToPlayer <= agent.stoppingDistance)
         {
-            currentState = MobState.Chasing;
+            currentState = MobState.Attacking;
         }
         else
         {
-            currentState = MobState.Searching;
-            PrepareSearchArea();
+            currentState = MobState.Chasing;
+            agent.speed = chaseSpeed;
         }
     }
 
     private bool CanDetectPlayer()
     {
-        return CanSeePlayer();
+        return CanSeePlayer() || CanHearPlayer();
     }
 
     private bool CanSeePlayer()
     {
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        Vector3 origin = transform.position + eyeLevelOffset;
+        Vector3 target = player.position + eyeLevelOffset;
+        Vector3 directionToPlayer = (target - origin).normalized;
         float angle = Vector3.Angle(transform.forward, directionToPlayer);
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        float distanceToPlayer = Vector3.Distance(origin, target);
 
         if (angle < viewAngle / 2 && distanceToPlayer < viewDistance)
         {
-            if (Physics.Raycast(transform.position, directionToPlayer, out RaycastHit hit, viewDistance, ~obstacleMask))
+            if (Physics.Raycast(origin, directionToPlayer, out RaycastHit hit, viewDistance, ~obstacleMask))
             {
-                return hit.transform.CompareTag("Player");
+                if (hit.transform.CompareTag("Player"))
+                {
+                    // Vérifie si le joueur est caché
+                    FirstPersonController playerController = player.GetComponent<FirstPersonController>();
+                    if (playerController != null && playerController.isHidden)
+                    {
+                        Debug.Log("Le joueur est caché, l'IA ne le voit pas");
+                        return false;
+                    }
+                    return true;
+                }
             }
         }
         return false;
     }
-    // DEBUG VISUEL
+
+
+    /// <summary>
+    /// Détecte si le mob peut entendre le joueur en fonction de l'audio réel.
+    /// </summary>
+    private bool CanHearPlayer()
+    {
+        AudioSource playerAudio = player.GetComponent<AudioSource>();
+        if (playerAudio != null && playerAudio.isPlaying)
+        {
+            float distance = Vector3.Distance(transform.position, player.position);
+            if (distance < hearingRadius)
+            {
+                Debug.Log("Joueur entendu par le mob");
+                FirstPersonController playerController = player.GetComponent<FirstPersonController>();
+                if (playerController != null && playerController.isHidden)
+                {
+                    Debug.Log("Le joueur est caché, l'IA ne l'entend pas");
+                    return false;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    
     private void OnDrawGizmosSelected()
     {
-        // Audition
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, hearingRadius);
 
-        // Vision
         Vector3 viewLeft = Quaternion.Euler(0, -viewAngle / 2, 0) * transform.forward * viewDistance;
         Vector3 viewRight = Quaternion.Euler(0, viewAngle / 2, 0) * transform.forward * viewDistance;
 
@@ -267,11 +417,9 @@ public class MobAI : MonoBehaviour
         Gizmos.DrawLine(transform.position + eyeLevelOffset, transform.position + eyeLevelOffset + viewLeft);
         Gizmos.DrawLine(transform.position + eyeLevelOffset, transform.position + eyeLevelOffset + viewRight);
 
-        // Dernière position vue
         Gizmos.color = Color.yellow;
         Gizmos.DrawSphere(lastKnownPosition, 0.2f);
 
-        // Points de recherche
         Gizmos.color = Color.green;
         foreach (var sp in searchPoints)
         {

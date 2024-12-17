@@ -25,7 +25,7 @@ public class LockerDoor : MonoBehaviour, IInteractable
         StopAllCoroutines();
         StartCoroutine(RotateDoor());
         GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null && !isOpen)
+        if (player != null && isOpen)
         {
             player.transform.position = hidePosition.position;
             player.GetComponent<FirstPersonController>().Hide(true);

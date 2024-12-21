@@ -347,10 +347,10 @@ MonoBehaviour:
   wallPrefabsNoDoor:
   - {fileID: 4756039552149760683, guid: c8b7e96a31016424a86ed54b7af8da63, type: 3}
   roomDimensions: {x: 50, y: 0.1, z: 50}
-  partitionDimensions: {x: 10, y: 6, z: 0.1}
-  minPartitions: 5
-  maxPartitions: 10
-  wallOffsetFromBorder: 2
+  gridRows: 5
+  gridColumns: 5
+  horizontalPartitionsCount: 2
+  verticalPartitionsCount: 2
 --- !u!1 &9023534684671355136
 GameObject:
   m_ObjectHideFlags: 0

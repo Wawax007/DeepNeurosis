@@ -16,10 +16,10 @@ TagManager:
   - Water
   - UI
   - Post
-  - 
-  - 
-  - 
-  - 
+  - Walkable
+  - InteractableProximity
+  - PhysicsProps
+  - Player
   - 
   - 
   - 

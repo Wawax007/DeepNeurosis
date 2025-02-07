@@ -12,6 +12,6 @@ public class PhysicsProp : MonoBehaviour, IInteractable
     public void Interact()
     {
         Debug.Log("Attrapé : " + name);
-        rb.isKinematic = false; // Simulation de prise en main
+        rb.isKinematic = false;
     }
 }

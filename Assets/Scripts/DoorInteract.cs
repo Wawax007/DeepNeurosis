@@ -4,15 +4,15 @@ public class DoorInteract : MonoBehaviour, IInteractable
 {
     public float openAngle = 90f;
     public float openSpeed = 2f;
-
+    public Transform pivot;
     private bool isOpen = false;
     private Quaternion initialRotation;
     private Quaternion targetRotation;
 
     void Start()
     {
-        initialRotation = transform.rotation;
-        targetRotation = Quaternion.Euler(transform.eulerAngles + Vector3.up * openAngle);
+        initialRotation = pivot.rotation;
+        targetRotation = pivot.rotation * Quaternion.Euler(0, openAngle, 0);
     }
 
     public void Interact()
@@ -27,7 +27,7 @@ public class DoorInteract : MonoBehaviour, IInteractable
         Quaternion target = isOpen ? targetRotation : initialRotation;
         while (Quaternion.Angle(transform.rotation, target) > 0.1f)
         {
-            transform.rotation = Quaternion.Lerp(transform.rotation, target, Time.deltaTime * openSpeed);
+            pivot.rotation = Quaternion.Slerp(pivot.rotation, target, openSpeed * Time.deltaTime);
             yield return null;
         }
     }

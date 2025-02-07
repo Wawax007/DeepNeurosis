@@ -77,6 +77,7 @@ public class PlayerInteraction : MonoBehaviour
             if (rb != null)
             {
                 heldObject = rb;
+                heldObject.isKinematic = false;
                 heldObject.drag = 10f;         // Augmenter le drag pour amortir le mouvement
                 heldObject.angularDrag = 5f;   // Réduire la rotation brusque
                 Debug.Log("Objet attrapé : " + rb.name);
@@ -96,7 +97,8 @@ public class PlayerInteraction : MonoBehaviour
     {
         heldObject.drag = 0f;         // Rétablir le drag par défaut
         heldObject.angularDrag = 0.05f;
-        heldObject = null;            // Relâcher l'objet
+        heldObject.isKinematic = false;
+        heldObject = null; 
         Debug.Log("Objet lâché.");
     }
 

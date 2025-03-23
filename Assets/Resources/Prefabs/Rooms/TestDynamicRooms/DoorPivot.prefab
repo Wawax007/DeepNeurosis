@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5468383817476724645}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: DoorPivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -46,7 +46,7 @@ GameObject:
   - component: {fileID: 1881208808280702712}
   - component: {fileID: 404974218129973641}
   - component: {fileID: 5492875017659922688}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Door
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -151,14 +151,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c107a7b3dcf9f5439c0df1aa3d199cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  doorTransform: {fileID: 5468383817476724645}
   openAngle: 90
   openSpeed: 2
-  interactKey: e
-  interactionDistance: 3
-  interactionPromptPrefab: {fileID: 0}
-  doorAudioSource: {fileID: 5492875017659922688}
-  doorOpenSound: {fileID: 8300000, guid: 6e7a3c5b286e44e478d128060e343215, type: 3}
+  pivot: {fileID: 5468383817476724645}
 --- !u!82 &5492875017659922688
 AudioSource:
   m_ObjectHideFlags: 0

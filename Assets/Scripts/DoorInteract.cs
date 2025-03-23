@@ -25,7 +25,7 @@ public class DoorInteract : MonoBehaviour, IInteractable
     private System.Collections.IEnumerator RotateDoor()
     {
         Quaternion target = isOpen ? targetRotation : initialRotation;
-        while (Quaternion.Angle(transform.rotation, target) > 0.1f)
+        while (Quaternion.Angle(pivot.rotation, target) > 0.1f)
         {
             pivot.rotation = Quaternion.Slerp(pivot.rotation, target, openSpeed * Time.deltaTime);
             yield return null;

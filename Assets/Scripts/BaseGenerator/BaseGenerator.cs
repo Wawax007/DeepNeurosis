@@ -21,16 +21,19 @@ public class BaseGenerator : MonoBehaviour
 
     IEnumerator GenerateMap()
     {
-        // Modifier la position de départ à (200, 0) pour eviter le volume underwater
-        Vector2 startPosition = new Vector2(200f / roomSize, 0f); // Diviser par roomSize pour correspondre à l'unité logique
+        // Pour éviter de générer dans l'eau (ou autre), on part de (200, 0) / roomSize
+        Vector2 startPosition = new Vector2(200f / roomSize, 0f);
         Debug.Log($"Generating the first room at {startPosition}");
 
+        // Instancie la première salle
         GameObject startRoom = InstantiateRoom(startPosition);
         RoomData startRoomData = new RoomData(startRoom, new bool[4]);
         roomPositions.Add(startPosition, startRoomData);
 
+        // On stocke l'info des murs
         exportedRoomData.Add(new RoomExportData(startPosition, startRoomData.walls));
 
+        // Instancie les autres salles
         for (int i = 1; i < numberOfRooms; i++)
         {
             Vector2 roomPosition;
@@ -40,20 +43,26 @@ public class BaseGenerator : MonoBehaviour
             {
                 roomPosition = GetRandomAdjacentPosition();
                 isPositionValid = !roomPositions.ContainsKey(roomPosition);
-            } while (!isPositionValid);
+            }
+            while (!isPositionValid);
 
             GameObject newRoom = InstantiateRoom(roomPosition);
             roomPositions.Add(roomPosition, new RoomData(newRoom, new bool[4]));
-
             exportedRoomData.Add(new RoomExportData(roomPosition, new bool[4]));
         }
 
+        // Ajuste quels murs sont externes/internes et gère la pose
         AdjustRoomWalls();
         CheckDoorErrors();
         ExportRoomData();
         yield break;
     }
 
+    /// <summary>
+    /// Détermine pour chaque salle :
+    /// - quels murs sont "externes" (pas de salle voisine)
+    /// - qui est "responsable" de placer le mur entre deux salles (porte ou non)
+    /// </summary>
     void AdjustRoomWalls()
     {
         foreach (var entry in roomPositions)
@@ -61,26 +70,91 @@ public class BaseGenerator : MonoBehaviour
             Vector2 position = entry.Key;
             RoomData currentRoom = entry.Value;
 
+            // Check salle voisine : s'il n'y en a pas dans une direction => mur externe
             bool isNorthExternal = !roomPositions.ContainsKey(position + Vector2.up);
             bool isSouthExternal = !roomPositions.ContainsKey(position + Vector2.down);
             bool isEastExternal = !roomPositions.ContainsKey(position + Vector2.right);
             bool isWestExternal = !roomPositions.ContainsKey(position + Vector2.left);
 
+            // Pour export (walls[0]=North, [1]=South, [2]=East, [3]=West)
             currentRoom.walls[0] = isNorthExternal;
             currentRoom.walls[1] = isSouthExternal;
             currentRoom.walls[2] = isEastExternal;
             currentRoom.walls[3] = isWestExternal;
 
+            // Indique si on doit mettre une "porte" dans telle direction
+            bool northDoor = false;
+            bool southDoor = false;
+            bool eastDoor = false;
+            bool westDoor = false;
+
+            // Indique si on doit *placer* un mur (ou rien) à cet endroit
+            bool placeNorthWall = true;
+            bool placeSouthWall = true;
+            bool placeEastWall = true;
+            bool placeWestWall = true;
+
+            // ----- Nord -----
+            if (roomPositions.ContainsKey(position + Vector2.up))
+            {
+                // Si notre Y est plus petit que le voisin => c'est nous qui plaçons la porte
+                if (position.y < (position + Vector2.up).y)
+                {
+                    northDoor = true; // On placera une porte
+                }
+                else
+                {
+                    // Le voisin a un Y plus petit, donc c'est lui qui place la porte/mur
+                    placeNorthWall = false;
+                }
+            }
+            // s'il n'y a pas de salle au Nord => mur externe => placeNorthWall = true (déjà true), mais pas de door
+
+            // ----- Sud -----
+            if (roomPositions.ContainsKey(position + Vector2.down))
+            {
+                if (position.y < (position + Vector2.down).y)
+                {
+                    southDoor = true;
+                }
+                else
+                {
+                    placeSouthWall = false;
+                }
+            }
+
+            // ----- Est -----
+            if (roomPositions.ContainsKey(position + Vector2.right))
+            {
+                if (position.x < (position + Vector2.right).x)
+                {
+                    eastDoor = true;
+                }
+                else
+                {
+                    placeEastWall = false;
+                }
+            }
+
+            // ----- Ouest -----
+            if (roomPositions.ContainsKey(position + Vector2.left))
+            {
+                if (position.x < (position + Vector2.left).x)
+                {
+                    westDoor = true;
+                }
+                else
+                {
+                    placeWestWall = false;
+                }
+            }
+
+            // Lance la config (coroutine) de la salle
             RoomGenerator roomGen = currentRoom.roomObject.GetComponent<RoomGenerator>();
             StartCoroutine(roomGen.SetupRoomCoroutine(
-                !currentRoom.walls[0], 
-                !currentRoom.walls[1], 
-                !currentRoom.walls[2], 
-                !currentRoom.walls[3],
-                isNorthExternal,
-                isSouthExternal,
-                isEastExternal,
-                isWestExternal
+                northDoor, southDoor, eastDoor, westDoor,
+                isNorthExternal, isSouthExternal, isEastExternal, isWestExternal,
+                placeNorthWall, placeSouthWall, placeEastWall, placeWestWall
             ));
         }
     }
@@ -101,11 +175,13 @@ public class BaseGenerator : MonoBehaviour
 
     void CheckDoorErrors()
     {
+        // Contrôle "naïf" : si une salle dit "pas de mur" alors que l'autre dit "mur", on peut détecter un mismatch
         foreach (var roomData in exportedRoomData)
         {
             Vector2 position = roomData.position;
             bool[] walls = roomData.walls;
 
+            // Nord
             if (roomPositions.ContainsKey(position + Vector2.up))
             {
                 bool northWall = walls[0];
@@ -116,7 +192,7 @@ public class BaseGenerator : MonoBehaviour
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.up}.");
                 }
             }
-
+            // Sud
             if (roomPositions.ContainsKey(position + Vector2.down))
             {
                 bool southWall = walls[1];
@@ -127,7 +203,7 @@ public class BaseGenerator : MonoBehaviour
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.down}.");
                 }
             }
-
+            // Est
             if (roomPositions.ContainsKey(position + Vector2.right))
             {
                 bool eastWall = walls[2];
@@ -138,7 +214,7 @@ public class BaseGenerator : MonoBehaviour
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.right}.");
                 }
             }
-
+            // Ouest
             if (roomPositions.ContainsKey(position + Vector2.left))
             {
                 bool westWall = walls[3];

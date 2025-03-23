@@ -7,7 +7,9 @@ public class PhysicsProp : MonoBehaviour, IInteractable
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
     }
+
 
     public void Interact()
     {

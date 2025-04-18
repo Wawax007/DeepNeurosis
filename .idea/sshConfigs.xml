@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig host="playgine.dev" id="e89fa85c-95d1-47ba-9546-d0a35724737b" keyPath="C:\Users\Wawax007\.ssh\id_rsa" port="22" customName="playgine" nameFormat="CUSTOM" username="root" useOpenSSHConfig="true">
+        <option name="customName" value="playgine" />
+      </sshConfig>
+    </configs>
+  </component>
+</project>

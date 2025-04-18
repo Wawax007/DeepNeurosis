@@ -20,7 +20,7 @@ public class DoorInteract : MonoBehaviour, IInteractable
         isOpen = !isOpen;
         StopAllCoroutines();
         StartCoroutine(RotateDoor());
-    }
+    }   
 
     private System.Collections.IEnumerator RotateDoor()
     {

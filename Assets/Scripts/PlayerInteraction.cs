@@ -1,30 +1,26 @@
+// PlayerInteraction.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(PlayerInput))]
 public class PlayerInteraction : MonoBehaviour
 {
     [Header("Raycast Settings")]
-    public float raycastRange = 3f;      // Portée du Raycast pour attraper des objets physiques
-    public LayerMask raycastLayer;       // Layer des objets physiques
+    public float raycastRange = 3f;
+    public LayerMask raycastLayer;  // Boutons, portes, etc. (les objets "interactables")
 
-    [Header("Sphere Interaction Settings")]
-    public float interactionRadius = 2f; // Rayon pour les interactions proches
-    public LayerMask sphereLayer;        // Layer des objets interactifs à proximité
+    [Header("Highlight")]
+    private GameObject highlightedObject;
+    private OutlineMeshCreator currentOutline;
 
-    [Header("Physics Prop Settings")]
-    private Rigidbody heldObject;        // Objet actuellement tenu
-    public Transform holdPosition;       // Position où tenir l'objet
-
-    [Tooltip("Force pour rapprocher l'objet (effet 'spring').")]
-    public float holdSpring = 50f;
-
-    [Tooltip("Damping pour réduire la vitesse de l'objet (effet 'frein').")]
-    public float holdDamping = 20f;
-
-    [Tooltip("Distance max avant de lâcher l'objet (optionnel).")]
+    [Header("Pickup Physics")]
+    public Transform holdPosition;   // Position devant le joueur où on tient l’objet
+    public float holdSpring = 50f; 
+    public float holdDamping = 20f;  
     public float maxHoldDistance = 4f;
 
     private Camera playerCamera;
+    private Rigidbody heldObject;  // L'objet qu'on tient
 
     private void Start()
     {
@@ -33,140 +29,145 @@ public class PlayerInteraction : MonoBehaviour
 
     private void Update()
     {
-        // Gestion des interactions (sphere + raycast) en Update
-        HandleSphereInteraction();
-        HandleRaycastInteraction();
-    }
+        // 1) Gérer le highlight en raycastant
+        CheckHighlight();
 
-    private void FixedUpdate()
-    {
-        // Mise à jour de l'objet tenu en physique, à chaque FixedUpdate
+        // 2) Si on tient un objet physique, on continue de le déplacer
         if (heldObject != null)
         {
             MoveHeldObject();
         }
     }
 
-    #region Sphere Interaction (Objets Proches)
-    void HandleSphereInteraction()
+    // Méthode InputSystem (par exemple "OnInteract" mappé à E)
+    public void OnInteract(InputValue value)
     {
-        Collider[] nearbyObjects = Physics.OverlapSphere(transform.position, interactionRadius, sphereLayer);
-
-        foreach (Collider col in nearbyObjects)
-        {
-            IInteractable interactable = col.GetComponent<IInteractable>();
-            if (interactable != null && Keyboard.current.eKey.wasPressedThisFrame)
-            {
-                interactable.Interact();
-                Debug.Log("Interaction avec : " + col.name);
-                return; // Interagit avec un seul objet par pression
-            }
-        }
-    }
-    #endregion
-
-    #region Raycast Interaction (Physics Props)
-    void HandleRaycastInteraction()
-    {
-        if (Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            if (heldObject == null)
-            {
-                TryPickUpPhysicsProp();
-            }
-            else
-            {
-                DropPhysicsProp();
-            }
-        }
+        InteractOrPickup();
     }
 
-    void TryPickUpPhysicsProp()
+    #region Highlight
+    void CheckHighlight()
     {
-        // Lancer un ray en face de la caméra pour détecter un Rigidbody
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        Debug.DrawLine(ray.origin, ray.origin + ray.direction * raycastRange, Color.red, 1f);
 
         if (Physics.Raycast(ray, out RaycastHit hit, raycastRange, raycastLayer))
         {
+            // Vérifie s’il y a un IInteractable
+            IInteractable interactable = hit.collider.GetComponent<IInteractable>()
+                ?? hit.collider.GetComponentInParent<IInteractable>();
+
+            if (interactable != null)
+            {
+                // On récupère OutlineMeshCreator pour le surlignage
+                OutlineMeshCreator outline = hit.collider.GetComponent<OutlineMeshCreator>()
+                    ?? hit.collider.GetComponentInParent<OutlineMeshCreator>();
+
+                // Si c'est un nouvel objet, on désactive l'ancien highlight
+                if (hit.collider.gameObject != highlightedObject)
+                {
+                    DisableHighlight();
+
+                    highlightedObject = hit.collider.gameObject;
+                    currentOutline = outline;
+
+                    if (currentOutline != null)
+                        currentOutline.SetHighlight(true);
+                }
+                return;
+            }
+        }
+
+        // Si pas d'IInteractable détecté, désactiver highlight
+        DisableHighlight();
+    }
+
+    void DisableHighlight()
+    {
+        if (currentOutline != null)
+        {
+            currentOutline.SetHighlight(false);
+        }
+        highlightedObject = null;
+        currentOutline = null;
+    }
+    #endregion
+
+    #region Interact / Pickup
+    void InteractOrPickup()
+    {
+        // Si on tient déjà un objet, on le lâche
+        if (heldObject != null)
+        {
+            DropPhysicsProp();
+            return;
+        }
+
+        // Sinon, on tente un raycast
+        Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        if (Physics.Raycast(ray, out RaycastHit hit, raycastRange, raycastLayer))
+        {
+            // 1) Vérifie s’il y a un IInteractable
+            IInteractable interactable = hit.collider.GetComponent<IInteractable>()
+                ?? hit.collider.GetComponentInParent<IInteractable>();
+            if (interactable != null)
+            {
+                // On déclenche l’interaction
+                interactable.Interact();
+                Debug.Log("Interacted with: " + hit.collider.name);
+                return;
+            }
+
+            // 2) Sinon, check si c'est un Rigidbody (physique)
             Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                // Assigner l'objet tenu
-                heldObject = rb;
-
-                // Activer la physique en continu pour éviter que l'objet traverse
-                heldObject.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-
-                // Rendre l'objet complètement physique (pas kinematic)
-                heldObject.isKinematic = false;
-
-                // Augmenter la friction et la rotation pour éviter trop d'oscillations
-                heldObject.drag = 5f;
-                heldObject.angularDrag = 5f;
-
-                // Facultatif: Ajuster la masse si besoin
-                // heldObject.mass = 2f;
-
-                Debug.Log("Objet attrapé : " + rb.name);
-            }
-            else
-            {
-                Debug.LogWarning("Aucun Rigidbody trouvé sur l'objet touché.");
+                PickUpPhysicsProp(rb);
+                return;
             }
         }
-        else
-        {
-            Debug.Log("Raycast n'a touché aucun objet interactif.");
-        }
+
+        Debug.Log("Rien à interagir ou ramasser.");
+    }
+    #endregion
+
+    #region Pickup / Drop
+    void PickUpPhysicsProp(Rigidbody rb)
+    {
+        heldObject = rb;
+        heldObject.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        heldObject.isKinematic = false;  // On veut pouvoir l'agiter un peu
+        heldObject.drag = 5f;
+        heldObject.angularDrag = 5f;
+
+        Debug.Log("Objet ramassé: " + rb.name);
     }
 
     void DropPhysicsProp()
     {
         if (heldObject == null) return;
 
-        // Rétablir les valeurs par défaut
         heldObject.drag = 0f;
         heldObject.angularDrag = 0.05f;
         heldObject.isKinematic = false;
 
-        // Retirer la référence
+        Debug.Log("Objet lâché: " + heldObject.name);
         heldObject = null;
-        Debug.Log("Objet lâché.");
     }
 
-    /// <summary>
-    /// Déplace l'objet tenu vers holdPosition en appliquant une force physique (spring/damping).
-    /// </summary>
     void MoveHeldObject()
     {
-        if (heldObject == null) return;
-
-        // Calcul de la direction vers la position de maintien
+        // On applique une force pour rapprocher l’objet du holdPosition
         Vector3 toHoldPos = holdPosition.position - heldObject.position;
-
-        // Optionnel : si trop loin, on lâche pour éviter de le tirer à travers un mur
         if (toHoldPos.magnitude > maxHoldDistance)
         {
+            // Si l’objet s’éloigne trop, on le lâche
             DropPhysicsProp();
             return;
         }
 
-        // "Spring": Applique une force qui attire l'objet vers holdPosition
-        // ForceMode.Acceleration pour ignorer la masse
+        // On applique une force style "spring joint"
         heldObject.AddForce(toHoldPos * holdSpring, ForceMode.Acceleration);
-
-        // "Damping": Applique une force opposée à la vitesse pour éviter l'accélération infinie
         heldObject.AddForce(-heldObject.velocity * holdDamping, ForceMode.Acceleration);
-    }
-    #endregion
-
-    #region Debug Draw (Affiche les zones dans la scène)
-    private void OnDrawGizmos()
-    {
-        // Permet de visualiser la sphère d'interaction dans la scène
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, interactionRadius);
     }
     #endregion
 }

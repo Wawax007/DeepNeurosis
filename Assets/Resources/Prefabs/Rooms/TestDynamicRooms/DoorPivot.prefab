@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5468383817476724645}
-  m_Layer: 8
+  m_Layer: 9
   m_Name: DoorPivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -44,9 +44,9 @@ GameObject:
   - component: {fileID: 5851773074398869832}
   - component: {fileID: 8245338445769107509}
   - component: {fileID: 1881208808280702712}
-  - component: {fileID: 404974218129973641}
+  - component: {fileID: 4010669570339875767}
   - component: {fileID: 5492875017659922688}
-  m_Layer: 8
+  m_Layer: 9
   m_Name: Door
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -139,7 +139,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &404974218129973641
+--- !u!114 &4010669570339875767
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

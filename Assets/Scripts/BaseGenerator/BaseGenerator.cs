@@ -4,178 +4,226 @@ using UnityEngine;
 using System.Text;
 using System.IO;
 
+/// <summary>
+/// Gère la génération procédurale d'un "étage" (un ensemble de salles).
+/// </summary>
 public class BaseGenerator : MonoBehaviour
 {
+    [Header("Prefabs & Settings")]
     public GameObject roomPrefab;
     public int numberOfRooms = 5;
     public float roomSize = 50f;
 
+    // Le point d’ancrage où est placé l’ascenseur
+    // => on le place exactement à la position de l’ascenseur, de sorte
+    //    que le bord Sud de la salle (room) coïncide avec l’ascenseur.
+    public Vector3 floorAnchor = new Vector3(183.021194f, 0f, -4.9f);
+
+    // Données internes de l’étage
     private Dictionary<Vector2, RoomData> roomPositions = new Dictionary<Vector2, RoomData>();
     private List<RoomExportData> exportedRoomData = new List<RoomExportData>();
 
-    void Start()
+    public bool IsFloorReady { get; private set; }
+
+    /// <summary>
+    /// Génère un nouvel étage "propre" de façon procédurale.
+    /// </summary>
+    public void GenerateFloor(int floorIndex)
     {
-        Debug.Log("Starting base generation...");
-        StartCoroutine(GenerateMap());
+        ClearOldData();
+        Debug.Log($"[BaseGenerator] Generating floor {floorIndex} ...");
+        StartCoroutine(GenerateMapCoroutine());
     }
 
-    IEnumerator GenerateMap()
+    /// <summary>
+    /// Construit un étage depuis des données chargées (FloorSaveData).
+    /// </summary>
+    public void LoadFloorFromData(FloorSaveData floorData)
     {
-        // Pour éviter de générer dans l'eau (ou autre), on part de (200, 0) / roomSize
-        Vector2 startPosition = new Vector2(200f / roomSize, 0f);
-        Debug.Log($"Generating the first room at {startPosition}");
+        ClearOldData();
+        Debug.Log($"[BaseGenerator] Loading floor from JSON data (floorIndex: {floorData.floorIndex})");
 
-        // Instancie la première salle
-        GameObject startRoom = InstantiateRoom(startPosition);
+        // Reconstruit toutes les salles depuis le JSON
+        foreach (var roomInfo in floorData.rooms)
+        {
+            Vector2 pos = roomInfo.position;
+            GameObject roomObj = InstantiateRoom(pos);
+            RoomData rData = new RoomData(roomObj, roomInfo.walls);
+            roomPositions.Add(pos, rData);
+            exportedRoomData.Add(new RoomExportData(pos, roomInfo.walls));
+        }
+
+        // Ajuste murs/portes
+        AdjustRoomWalls();
+        CheckDoorErrors();
+
+        IsFloorReady = true;
+    }
+
+    IEnumerator GenerateMapCoroutine()
+    {
+        // La salle initiale est à la coordonnée (0,0) dans notre grille
+        Vector2 startGridPos = Vector2.zero;
+        Debug.Log($"Generating first room at grid {startGridPos}");
+
+        // Instancie la 1ère salle
+        GameObject startRoom = InstantiateRoom(startGridPos);
         RoomData startRoomData = new RoomData(startRoom, new bool[4]);
-        roomPositions.Add(startPosition, startRoomData);
+        roomPositions.Add(startGridPos, startRoomData);
 
-        // On stocke l'info des murs
-        exportedRoomData.Add(new RoomExportData(startPosition, startRoomData.walls));
+        // On stocke l’info des murs
+        exportedRoomData.Add(new RoomExportData(startGridPos, startRoomData.walls));
 
-        // Instancie les autres salles
+        // Génère d’autres salles (aléatoires) reliées par adjacence
         for (int i = 1; i < numberOfRooms; i++)
         {
-            Vector2 roomPosition;
-            bool isPositionValid;
+            Vector2 roomPos;
+            bool valid;
 
             do
             {
-                roomPosition = GetRandomAdjacentPosition();
-                isPositionValid = !roomPositions.ContainsKey(roomPosition);
+                roomPos = GetRandomAdjacentPosition();
+                valid = !roomPositions.ContainsKey(roomPos);
             }
-            while (!isPositionValid);
+            while (!valid);
 
-            GameObject newRoom = InstantiateRoom(roomPosition);
-            roomPositions.Add(roomPosition, new RoomData(newRoom, new bool[4]));
-            exportedRoomData.Add(new RoomExportData(roomPosition, new bool[4]));
+            GameObject newRoom = InstantiateRoom(roomPos);
+            roomPositions.Add(roomPos, new RoomData(newRoom, new bool[4]));
+            exportedRoomData.Add(new RoomExportData(roomPos, new bool[4]));
         }
 
-        // Ajuste quels murs sont externes/internes et gère la pose
+        // Ajuste murs/portes
         AdjustRoomWalls();
         CheckDoorErrors();
-        ExportRoomData();
+
+        IsFloorReady = true;
         yield break;
     }
 
     /// <summary>
-    /// Détermine pour chaque salle :
-    /// - quels murs sont "externes" (pas de salle voisine)
-    /// - qui est "responsable" de placer le mur entre deux salles (porte ou non)
+    /// Calcule les murs/portes internes/externes
     /// </summary>
     void AdjustRoomWalls()
     {
         foreach (var entry in roomPositions)
         {
-            Vector2 position = entry.Key;
-            RoomData currentRoom = entry.Value;
+            Vector2 pos = entry.Key;
+            RoomData roomData = entry.Value;
 
-            // Check salle voisine : s'il n'y en a pas dans une direction => mur externe
-            bool isNorthExternal = !roomPositions.ContainsKey(position + Vector2.up);
-            bool isSouthExternal = !roomPositions.ContainsKey(position + Vector2.down);
-            bool isEastExternal = !roomPositions.ContainsKey(position + Vector2.right);
-            bool isWestExternal = !roomPositions.ContainsKey(position + Vector2.left);
+            // Vérifie la présence de voisins
+            bool northExt = !roomPositions.ContainsKey(pos + Vector2.up);
+            bool southExt = !roomPositions.ContainsKey(pos + Vector2.down);
+            bool eastExt  = !roomPositions.ContainsKey(pos + Vector2.right);
+            bool westExt  = !roomPositions.ContainsKey(pos + Vector2.left);
 
-            // Pour export (walls[0]=North, [1]=South, [2]=East, [3]=West)
-            currentRoom.walls[0] = isNorthExternal;
-            currentRoom.walls[1] = isSouthExternal;
-            currentRoom.walls[2] = isEastExternal;
-            currentRoom.walls[3] = isWestExternal;
+            roomData.walls[0] = northExt; // 0 => N
+            roomData.walls[1] = southExt; // 1 => S
+            roomData.walls[2] = eastExt;  // 2 => E
+            roomData.walls[3] = westExt;  // 3 => W
 
-            // Indique si on doit mettre une "porte" dans telle direction
-            bool northDoor = false;
-            bool southDoor = false;
-            bool eastDoor = false;
-            bool westDoor = false;
+            bool northDoor = false, southDoor = false, eastDoor = false, westDoor = false;
+            bool placeN = true, placeS = true, placeE = true, placeW = true;
 
-            // Indique si on doit *placer* un mur (ou rien) à cet endroit
-            bool placeNorthWall = true;
-            bool placeSouthWall = true;
-            bool placeEastWall = true;
-            bool placeWestWall = true;
-
-            // ----- Nord -----
-            if (roomPositions.ContainsKey(position + Vector2.up))
+            // Nord
+            if (roomPositions.ContainsKey(pos + Vector2.up))
             {
-                // Si notre Y est plus petit que le voisin => c'est nous qui plaçons la porte
-                if (position.y < (position + Vector2.up).y)
-                {
-                    northDoor = true; // On placera une porte
-                }
+                if (pos.y < (pos + Vector2.up).y)
+                    northDoor = true;   // c'est nous qui plaçons la porte
                 else
-                {
-                    // Le voisin a un Y plus petit, donc c'est lui qui place la porte/mur
-                    placeNorthWall = false;
-                }
+                    placeN = false;    // c'est l'autre salle qui le fait
             }
-            // s'il n'y a pas de salle au Nord => mur externe => placeNorthWall = true (déjà true), mais pas de door
-
-            // ----- Sud -----
-            if (roomPositions.ContainsKey(position + Vector2.down))
+            // Sud
+            if (roomPositions.ContainsKey(pos + Vector2.down))
             {
-                if (position.y < (position + Vector2.down).y)
-                {
+                if (pos.y < (pos + Vector2.down).y)
                     southDoor = true;
-                }
                 else
-                {
-                    placeSouthWall = false;
-                }
+                    placeS = false;
             }
-
-            // ----- Est -----
-            if (roomPositions.ContainsKey(position + Vector2.right))
+            // Est
+            if (roomPositions.ContainsKey(pos + Vector2.right))
             {
-                if (position.x < (position + Vector2.right).x)
-                {
+                if (pos.x < (pos + Vector2.right).x)
                     eastDoor = true;
-                }
                 else
-                {
-                    placeEastWall = false;
-                }
+                    placeE = false;
             }
-
-            // ----- Ouest -----
-            if (roomPositions.ContainsKey(position + Vector2.left))
+            // Ouest
+            if (roomPositions.ContainsKey(pos + Vector2.left))
             {
-                if (position.x < (position + Vector2.left).x)
-                {
+                if (pos.x < (pos + Vector2.left).x)
                     westDoor = true;
-                }
                 else
-                {
-                    placeWestWall = false;
-                }
+                    placeW = false;
             }
 
-            // Lance la config (coroutine) de la salle
-            RoomGenerator roomGen = currentRoom.roomObject.GetComponent<RoomGenerator>();
-            StartCoroutine(roomGen.SetupRoomCoroutine(
-                northDoor, southDoor, eastDoor, westDoor,
-                isNorthExternal, isSouthExternal, isEastExternal, isWestExternal,
-                placeNorthWall, placeSouthWall, placeEastWall, placeWestWall
-            ));
+            // Pour la première salle (0,0), on veut supprimer le mur Sud (ou placer une "ouverture") pour
+            // qu’elle soit connectée à l’ascenseur. 
+            if (pos == Vector2.zero)
+            {
+                placeS = false;
+                southDoor = false; // pas de porte décorative
+                roomData.walls[1] = false; // Indique "pas de mur" au Sud
+            }
+
+            // Lance la config
+            RoomGenerator roomGen = roomData.roomObject.GetComponent<RoomGenerator>();
+            if (roomGen != null)
+            {
+                StartCoroutine(roomGen.SetupRoomCoroutine(
+                    northDoor, southDoor, eastDoor, westDoor,
+                    northExt, southExt, eastExt, westExt,
+                    placeN, placeS, placeE, placeW
+                ));
+            }
         }
     }
 
-    GameObject InstantiateRoom(Vector2 roomPosition)
+    /// <summary>
+    /// Instancie une salle selon sa position "grille" relative
+    /// en la plaçant devant l’ascenseur.
+    /// </summary>
+    private GameObject InstantiateRoom(Vector2 gridPos)
     {
-        Vector3 worldPosition = new Vector3(roomPosition.x * roomSize, 0, roomPosition.y * roomSize);
-        return Instantiate(roomPrefab, worldPosition, Quaternion.identity);
+        float half = roomSize * 0.5f;
+        // On ajoute half sur Z pour que le bord Sud colle à ascenseur.z
+        Vector3 offset = new Vector3(
+            gridPos.x * roomSize,
+            0f,
+            (gridPos.y * roomSize) + half
+        );
+
+        // On place la salle
+        Vector3 worldPos = floorAnchor + offset;
+
+        // Instantie
+        return Instantiate(roomPrefab, worldPos, Quaternion.identity, this.transform);
     }
 
+    /// <summary>
+    /// Trouve au hasard une position voisine d'une salle existante
+    /// (on retire Vector2.down pour éviter de construire derrière l'ascenseur).
+    /// </summary>
     Vector2 GetRandomAdjacentPosition()
     {
-        List<Vector2> directions = new List<Vector2> { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-        Vector2 randomDirection = directions[Random.Range(0, directions.Count)];
-        Vector2 existingRoomPosition = new List<Vector2>(roomPositions.Keys)[Random.Range(0, roomPositions.Count)];
-        return existingRoomPosition + randomDirection;
+        // On ne propose plus 'down', donc impossible d'aller au sud
+        List<Vector2> directions = new List<Vector2> 
+        { 
+            Vector2.up, 
+            Vector2.left, 
+            Vector2.right
+        };
+
+        Vector2 randomDir = directions[Random.Range(0, directions.Count)];
+        Vector2 existingPos = new List<Vector2>(roomPositions.Keys)[Random.Range(0, roomPositions.Count)];
+        return existingPos + randomDir;
     }
 
+    /// <summary>
+    /// Vérification d’éventuels conflits de murs
+    /// </summary>
     void CheckDoorErrors()
     {
-        // Contrôle "naïf" : si une salle dit "pas de mur" alors que l'autre dit "mur", on peut détecter un mismatch
         foreach (var roomData in exportedRoomData)
         {
             Vector2 position = roomData.position;
@@ -186,62 +234,76 @@ public class BaseGenerator : MonoBehaviour
             {
                 bool northWall = walls[0];
                 bool southWall = roomPositions[position + Vector2.up].walls[1];
-
                 if (northWall != southWall)
-                {
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.up}.");
-                }
             }
             // Sud
             if (roomPositions.ContainsKey(position + Vector2.down))
             {
                 bool southWall = walls[1];
                 bool northWall = roomPositions[position + Vector2.down].walls[0];
-
                 if (southWall != northWall)
-                {
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.down}.");
-                }
             }
             // Est
             if (roomPositions.ContainsKey(position + Vector2.right))
             {
                 bool eastWall = walls[2];
                 bool westWall = roomPositions[position + Vector2.right].walls[3];
-
                 if (eastWall != westWall)
-                {
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.right}.");
-                }
             }
             // Ouest
             if (roomPositions.ContainsKey(position + Vector2.left))
             {
                 bool westWall = walls[3];
                 bool eastWall = roomPositions[position + Vector2.left].walls[2];
-
                 if (westWall != eastWall)
-                {
                     Debug.LogWarning($"Door mismatch between {position} and {position + Vector2.left}.");
-                }
             }
         }
     }
 
-    void ExportRoomData()
+    /// <summary>
+    /// Détruit les salles existantes avant d'en générer ou charger un nouvel étage
+    /// </summary>
+    void ClearOldData()
     {
-        StringBuilder sb = new StringBuilder();
-        foreach (var room in exportedRoomData)
+        foreach (var kvp in roomPositions)
         {
-            sb.AppendLine($"Position: {room.position}, Walls: [{string.Join(",", room.walls)}]");
+            if (kvp.Value.roomObject != null)
+                Destroy(kvp.Value.roomObject);
         }
+        roomPositions.Clear();
+        exportedRoomData.Clear();
+        IsFloorReady = false;
+    }
 
-        string filePath = Path.Combine(Application.persistentDataPath, "RoomData.txt");
-        File.WriteAllText(filePath, sb.ToString());
-        Debug.Log($"Room data exported to {filePath}");
+    /// <summary>
+    /// Prépare les infos pour la sauvegarde JSON
+    /// </summary>
+    public FloorSaveData GetFloorData(int floorIndex)
+    {
+        FloorSaveData data = new FloorSaveData();
+        data.floorIndex = floorIndex;
+        data.rooms = new List<RoomExportData>();
+
+        foreach (var kvp in roomPositions)
+        {
+            data.rooms.Add(new RoomExportData(kvp.Key, kvp.Value.walls));
+        }
+        return data;
     }
 }
 
+[System.Serializable]
+public class FloorSaveData
+{
+    public int floorIndex;
+    public List<RoomExportData> rooms;
+}
+
+[System.Serializable]
 public class RoomExportData
 {
     public Vector2 position;

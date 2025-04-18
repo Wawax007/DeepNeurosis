@@ -402,13 +402,38 @@ PrefabInstance:
       propertyPath: m_Name
       value: DoorPivot
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 404974218129973641, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
+    - {fileID: 6110794116749082813, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7146457351924702864, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 5029870226321488368}
   m_SourcePrefab: {fileID: 100100000, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
 --- !u!4 &873590440676372428 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5468383817476724645, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
   m_PrefabInstance: {fileID: 5187029647312877673}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2652997186181375737 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7146457351924702864, guid: b8c139a4c30c36f41b8cc8b7a8850984, type: 3}
+  m_PrefabInstance: {fileID: 5187029647312877673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5029870226321488368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2652997186181375737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cb4d802e9ea331499218741f3067f9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pivot: {fileID: 873590440676372428}
+  openAngle: 90
+  openSpeed: 2

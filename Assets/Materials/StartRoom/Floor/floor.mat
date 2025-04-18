@@ -1,18 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-353108872191140329
-MonoBehaviour:
-  m_ObjectHideFlags: 11
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 639247ca83abc874e893eb93af2b5e44, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  version: 0
 --- !u!21 &2100000
 Material:
   serializedVersion: 8
@@ -20,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: WallStartRoom
+  m_Name: floor
   m_Shader: {fileID: -6465566751694194690, guid: d2f350c602d6a1b4fa8c641e84c47e0b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -37,15 +24,15 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _AOMap:
-        m_Texture: {fileID: 2800000, guid: f59e0a9cb917483479ce9526e1a3b585, type: 3}
+        m_Texture: {fileID: 2800000, guid: a5fa0d79ef507704eb8599310312c17f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Albedo:
-        m_Texture: {fileID: 2800000, guid: f5782a46bade2d94680a1e0f25aec7f1, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9e56dfcaec137264a9e5efa64b911fb7, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 5a66f4604528b8e418b15d8c501b3efd, type: 3}
+        m_Texture: {fileID: 2800000, guid: 43d1efbcfd00ba3409aa9348ab1f068b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -53,7 +40,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailMask:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 892cf2c9f4eaf5e41ad01f7355e22760, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailNormalMap:
@@ -62,22 +49,22 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
         m_Texture: {fileID: 0}
-        m_Scale: {x: 5, y: 1}
+        m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: f5782a46bade2d94680a1e0f25aec7f1, type: 3}
-        m_Scale: {x: 5, y: 1}
+        m_Texture: {fileID: 2800000, guid: 9e56dfcaec137264a9e5efa64b911fb7, type: 3}
+        m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: 44591d34307e0e741a3303c3e5873efe, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9e07b8e68598a3d499cdcf836f93a7be, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
-        m_Texture: {fileID: 2800000, guid: 5a66f4604528b8e418b15d8c501b3efd, type: 3}
+        m_Texture: {fileID: 2800000, guid: 43d1efbcfd00ba3409aa9348ab1f068b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 2800000, guid: f59e0a9cb917483479ce9526e1a3b585, type: 3}
+        m_Texture: {fileID: 2800000, guid: a5fa0d79ef507704eb8599310312c17f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
@@ -98,23 +85,23 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
-    - _Glossiness: 0
+    - _Glossiness: 1
     - _GlossyReflections: 0
     - _Metallic: 0.1
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Smoothness: 1
-    - _SmoothnessTextureChannel: 1
-    - _Specular: 0
+    - _SmoothnessTextureChannel: 0
+    - _Specular: 0.03
     - _SpecularHighlights: 0
     - _SrcBlend: 1
-    - _Tile: 0.5
+    - _Tile: 0.3
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0.00028559845, g: 0.00028559845, b: 0.00028559845, a: 1}
-    - _SpecColor: {r: 0.07169801, g: 0.07169801, b: 0.07169801, a: 1}
-    - _Specular_1: {r: 0, g: 0, b: 0, a: 0}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _SpecColor: {r: 0.07924521, g: 0.07924521, b: 0.07924521, a: 1}
+    - _Specular_1: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

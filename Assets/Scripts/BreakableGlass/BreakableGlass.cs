@@ -24,7 +24,7 @@ public class BreakableGlass : MonoBehaviour
     {
         if (brokenGlassPrefab)
         {
-            Instantiate(brokenGlassPrefab, transform.position, Quaternion.Euler(0, 0, 0));
+            Instantiate(brokenGlassPrefab, transform.position, Quaternion.Euler(0, 90, 0));
         }
 
         if (breakSound)

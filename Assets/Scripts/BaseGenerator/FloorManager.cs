@@ -11,17 +11,15 @@ public class FloorManager : MonoBehaviour
     [Header("Floor Settings")]
     public int currentFloor = -2;       
     public string saveFolderName = "FloorsData";
-
+    private GameObject startRoomObj;
+    
     private void Start()
     {
-        // Crée le dossier de sauvegarde si besoin
         string dirPath = Path.Combine(Application.persistentDataPath, saveFolderName);
         if (!Directory.Exists(dirPath))
             Directory.CreateDirectory(dirPath);
 
-        // Ici, la Start Room (-2) est déjà dans la scène, manuelle.
-        // On n'appelle pas GenerateFloor(-2) ni LoadFloorFromJson(-2).
-        // Le joueur est donc dans cette Start Room au démarrage.
+        startRoomObj = GameObject.Find("StartRoom");
     }
 
     /// <summary>
@@ -29,43 +27,42 @@ public class FloorManager : MonoBehaviour
     /// </summary>
     public void GoToFloor(int targetFloor)
     {
-        // 1) Sauvegarder/détruire l’étage actuel
         SaveAndUnloadCurrentFloor();
-
-        // 2) Mettre à jour l’étage courant
         currentFloor = targetFloor;
 
-        // 3) Vérifier si un fichier de sauvegarde existe pour cet étage
+        // FLOOR -2 → StartRoom
+        if (currentFloor == -2)
+        {
+            baseGenerator.IsFloorReady = true;
+            SetStartRoomActive(true); 
+                
+            Debug.Log("[FloorManager] StartRoom already in scene. No generation or loading required.");
+            StartCoroutine(WaitForFloorReady());
+            return;
+        }
+
+        // AUTRES ÉTAGES
         if (FloorSaveExists(currentFloor))
         {
-            // Charger l’étage depuis JSON
             LoadFloorFromJson(currentFloor);
         }
         else
         {
-            // Générer l’étage
             baseGenerator.GenerateFloor(currentFloor);
         }
 
-        // 4) Attendre que tout soit prêt avant de laisser le joueur s’y rendre
-        //    (pas de téléportation, on attend juste la génération pour éviter d’y entrer trop tôt)
         StartCoroutine(WaitForFloorReady());
     }
 
+
+
     private void SaveAndUnloadCurrentFloor()
     {
-        // Si c'est l'étage -2 (Start Room), on ne la sauvegarde pas (puisqu'elle est manuelle)
-        // Mais on veut la détruire pour la remplacer par un autre étage plus tard.
         if (currentFloor == -2)
         {
-            // Retrouve l'objet "StartRoom" dans la scène et le supprime
-            var startRoomObj = GameObject.Find("StartRoom");
-            if (startRoomObj != null)
-            {
-                Destroy(startRoomObj);
-                Debug.Log("[FloorManager] Start Room destroyed.");
-            }
+            SetStartRoomActive(false); 
         }
+
         else
         {
             // Pour les autres étages, on les sauvegarde
@@ -84,8 +81,28 @@ public class FloorManager : MonoBehaviour
         Debug.Log("[FloorManager] Floor ready. No teleportation is performed.");
     }
 
+    private void SetStartRoomActive(bool active)
+    {
+        if (startRoomObj == null) return;
+
+        startRoomObj.SetActive(active);
+
+        Rigidbody[] rigidbodies = startRoomObj.GetComponentsInChildren<Rigidbody>();
+        foreach (var rb in rigidbodies)
+        {
+            rb.isKinematic = !active;
+            rb.detectCollisions = active;
+        }
+    }
+
+    
     private void SaveFloorToJson(int floorIndex)
     {
+        if (floorIndex == -2)
+        {
+            Debug.Log("[FloorManager] StartRoom does not need to be saved.");
+            return;
+        }
         // Récupère les données du baseGenerator
         FloorSaveData data = baseGenerator.GetFloorData(floorIndex);
 

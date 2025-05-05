@@ -73,6 +73,12 @@ public class CounterDoor : MonoBehaviour, IInteractable
                 if (diodeRenderer != null && diodeOnMaterial != null)
                 {
                     diodeRenderer.material = diodeOnMaterial;
+                    //Ouvrir les portes de l'ascenseur
+                    ElevatorController elevatorController = FindObjectOfType<ElevatorController>();
+                    if (elevatorController != null && elevatorController.doorAnimator != null)
+                    {
+                        elevatorController.doorAnimator.SetTrigger("Open");
+                    }
                 }
 
                 break;

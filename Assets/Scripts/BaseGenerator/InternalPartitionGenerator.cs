@@ -1,98 +1,103 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// Génère et gère les cloisons internes d’une salle (sub‑rooms + portes).
+/// </summary>
 public class InternalPartitionGenerator : MonoBehaviour
 {
+    #region Inspector fields
     [Header("Prefabs des cloisons")]
     public GameObject[] wallPrefabsWithDoor; // Assigné dans l'inspecteur
     public GameObject[] wallPrefabsNoDoor;   // Assigné dans l'inspecteur
 
-    [Header("Paramètres de la pièce")]
+    [Header("Dimensions de la pièce (X,Z = taille au sol)")]
     public Vector3 roomDimensions = new Vector3(50f, 0.1f, 50f);
 
     [Header("Grille")]
-    public int gridRows = 5;
+    public int gridRows    = 5;
     public int gridColumns = 5;
 
-    [Header("Génération de partitions")]
-    [Tooltip("Nombre de partitions internes horizontales à créer (0 à gridRows-1)")]
+    [Header("Partitions internes (comptes max)")]
+    [Tooltip("Nombre de cloisons horizontales maximum (0 à gridRows‑1)")]
     public int horizontalPartitionsCount = 2;
-    [Tooltip("Nombre de partitions internes verticales à créer (0 à gridColumns-1)")]
-    public int verticalPartitionsCount = 2;
+    [Tooltip("Nombre de cloisons verticales maximum (0 à gridColumns‑1)")]
+    public int verticalPartitionsCount   = 2;
+    #endregion
 
+    #region Runtime state
     private float cellWidth;
     private float cellHeight;
 
     private List<int> horizontalPartitions = new List<int>();
-    private List<int> verticalPartitions = new List<int>();
+    private List<int> verticalPartitions   = new List<int>();
 
-    private int[,] cellRoomIds;
-    private Dictionary<int, Color> roomColors = new Dictionary<int, Color>();
-    private Dictionary<int, List<Vector2Int>> roomCells = new Dictionary<int, List<Vector2Int>>();
+    private int[,] cellRoomIds;                    // [row,col] → roomId
+    private readonly Dictionary<int, Color>           roomColors = new Dictionary<int, Color>();
+    private readonly Dictionary<int, List<Vector2Int>> roomCells  = new Dictionary<int, List<Vector2Int>>();
 
-    // Pour représenter un mur placé
+    private readonly List<WallInfo> placedWalls = new List<WallInfo>();
+
+    private int generationSeed = 0;
+    public  void SetSeed(int seed) => generationSeed = seed;
+    #endregion
+
+    #region Nested types
+    /// <summary>
+    /// Encapsule un mur posé entre deux sous‑salles.
+    /// </summary>
     private class WallInfo
     {
         public GameObject wallObject;
         public int roomA;
         public int roomB;
         public bool hasDoor;
-        public bool isHorizontal; // true si mur horizontal, false si vertical
-        public int lineIndex;    // index de la ligne de partition
-        public int cellIndex;    // index de la colonne ou ligne selon le sens
+        public bool isHorizontal; // true = horizontal, false = vertical
+        public int  lineIndex;    // Ligne/colonne de la cloison
+        public int  cellIndex;    // Cellule le long de la cloison
     }
+    #endregion
 
-    // Murs placés
-    private List<WallInfo> placedWalls = new List<WallInfo>();
-
+    #region Unity lifecycle
     private void Start()
     {
-        cellWidth = roomDimensions.x / gridColumns;   
-        cellHeight = roomDimensions.z / gridRows;     
+        Random.InitState(generationSeed);
 
-        // On randomise le nombre de partitions internes
-        horizontalPartitionsCount = Random.Range(0, Mathf.Max(1, (gridRows - 1)/2 + 1)); 
-        verticalPartitionsCount   = Random.Range(0, Mathf.Max(1, (gridColumns - 1)/2 + 1));
+        cellWidth  = roomDimensions.x / gridColumns;
+        cellHeight = roomDimensions.z / gridRows;
 
-        // Générer des partitions internes
+        // Choix aléatoire du nombre de cloisons à placer (au plus la valeur indiquée dans l'inspecteur)
+        horizontalPartitionsCount = Random.Range(0, Mathf.Max(1, (gridRows    - 1) / 2 + 1));
+        verticalPartitionsCount   = Random.Range(0, Mathf.Max(1, (gridColumns - 1) / 2 + 1));
+
         GenerateRandomPartitions();
-
-        // Déterminer les sous-salles
         DetermineSubRooms();
-
-        // Placer les cloisons sans porte
         PlaceNoDoorWalls();
-
-        // Remplacer un mur par une cloison avec porte (au hasard)
         ReplaceOneWallWithDoor();
-
-        // Vérification finale : s'assurer que toutes les sous-salles ont au moins une cloison avec porte
         EnsureAllSubRoomsHaveDoor();
-
-        // Nouvelle étape : s'assurer que toutes les sous-salles sont accessibles entre elles (connectivité globale)
         EnsureFullConnectivity();
     }
+    #endregion
 
+    #region Generation steps
     private void GenerateRandomPartitions()
     {
         horizontalPartitions.Clear();
         verticalPartitions.Clear();
 
-        // Partitions horizontales
-        List<int> possibleH = new List<int>();
-        for (int i = 1; i < gridRows; i++)
-            possibleH.Add(i);
-        Shuffle(possibleH);
-        for (int i = 0; i < Mathf.Min(horizontalPartitionsCount, possibleH.Count); i++)
-            horizontalPartitions.Add(possibleH[i]);
+        // Lignes horizontales
+        List<int> candidatesH = new List<int>();
+        for (int i = 1; i < gridRows; i++) candidatesH.Add(i);
+        Shuffle(candidatesH);
+        for (int i = 0; i < Mathf.Min(horizontalPartitionsCount, candidatesH.Count); i++)
+            horizontalPartitions.Add(candidatesH[i]);
 
-        // Partitions verticales
-        List<int> possibleV = new List<int>();
-        for (int j = 1; j < gridColumns; j++)
-            possibleV.Add(j);
-        Shuffle(possibleV);
-        for (int j = 0; j < Mathf.Min(verticalPartitionsCount, possibleV.Count); j++)
-            verticalPartitions.Add(possibleV[j]);
+        // Lignes verticales
+        List<int> candidatesV = new List<int>();
+        for (int j = 1; j < gridColumns; j++) candidatesV.Add(j);
+        Shuffle(candidatesV);
+        for (int j = 0; j < Mathf.Min(verticalPartitionsCount, candidatesV.Count); j++)
+            verticalPartitions.Add(candidatesV[j]);
     }
 
     private void DetermineSubRooms()
@@ -101,26 +106,27 @@ public class InternalPartitionGenerator : MonoBehaviour
         horizontalPartitions.Sort();
         verticalPartitions.Sort();
 
-        List<(int start, int end)> horizontalBands = new List<(int, int)>();
+        // Découpage en bandes horizontales et verticales
+        var horizontalBands = new List<(int start, int end)>();
         {
             int start = 0;
             foreach (int h in horizontalPartitions)
             {
-                horizontalBands.Add((start, h-1));
+                horizontalBands.Add((start, h - 1));
                 start = h;
             }
-            horizontalBands.Add((start, gridRows-1));
+            horizontalBands.Add((start, gridRows - 1));
         }
 
-        List<(int start, int end)> verticalBands = new List<(int, int)>();
+        var verticalBands = new List<(int start, int end)>();
         {
             int start = 0;
             foreach (int v in verticalPartitions)
             {
-                verticalBands.Add((start, v-1));
+                verticalBands.Add((start, v - 1));
                 start = v;
             }
-            verticalBands.Add((start, gridColumns-1));
+            verticalBands.Add((start, gridColumns - 1));
         }
 
         int roomId = 1;
@@ -132,239 +138,210 @@ public class InternalPartitionGenerator : MonoBehaviour
                 {
                     for (int c = vBand.start; c <= vBand.end; c++)
                     {
-                        cellRoomIds[r,c] = roomId;
+                        cellRoomIds[r, c] = roomId;
                     }
                 }
-
                 roomId++;
             }
         }
 
+        // Stocke les cellules par sous‑salle
         roomCells.Clear();
         roomColors.Clear();
-
         for (int r = 0; r < gridRows; r++)
         {
             for (int c = 0; c < gridColumns; c++)
             {
-                int rid = cellRoomIds[r,c];
-                if (!roomCells.ContainsKey(rid))
-                    roomCells[rid] = new List<Vector2Int>();
-                roomCells[rid].Add(new Vector2Int(r,c));
+                int rid = cellRoomIds[r, c];
+                if (!roomCells.ContainsKey(rid)) roomCells[rid] = new List<Vector2Int>();
+                roomCells[rid].Add(new Vector2Int(r, c));
             }
         }
 
         foreach (var kvp in roomCells)
-        {
-            roomColors[kvp.Key] = Random.ColorHSV(0f,1f,0.5f,1f,0.5f,1f);
-        }
+            roomColors[kvp.Key] = Random.ColorHSV(0f, 1f, 0.5f, 1f, 0.5f, 1f);
     }
 
     private void PlaceNoDoorWalls()
     {
         placedWalls.Clear();
 
-        // Murs horizontaux
+        // Cloisons horizontales
         foreach (int hLine in horizontalPartitions)
         {
             for (int c = 0; c < gridColumns; c++)
             {
-                Vector3 position = CellToWorldPosition(hLine, c, horizontal: true);
-                Quaternion rotation = Quaternion.identity;
-                var wallObj = InstantiateRandomNoDoorWall(position, rotation);
-                if (wallObj != null)
-                {
-                    int roomA = cellRoomIds[hLine-1, c];
-                    int roomB = cellRoomIds[hLine, c];
+                Vector3 pos = CellToWorldPosition(hLine, c, horizontal: true);
+                Quaternion rot = Quaternion.identity;
+                GameObject wallObj = InstantiateRandomNoDoorWall(pos, rot);
+                if (wallObj == null) continue;
 
-                    placedWalls.Add(new WallInfo {
-                        wallObject = wallObj,
-                        roomA = roomA,
-                        roomB = roomB,
-                        hasDoor = false,
-                        isHorizontal = true,
-                        lineIndex = hLine,
-                        cellIndex = c
-                    });
-                }
+                int roomA = cellRoomIds[hLine - 1, c];
+                int roomB = cellRoomIds[hLine,     c];
+
+                placedWalls.Add(new WallInfo
+                {
+                    wallObject   = wallObj,
+                    roomA        = roomA,
+                    roomB        = roomB,
+                    hasDoor      = false,
+                    isHorizontal = true,
+                    lineIndex    = hLine,
+                    cellIndex    = c
+                });
             }
         }
 
-        // Murs verticaux
+        // Cloisons verticales
         foreach (int vLine in verticalPartitions)
         {
             for (int r = 0; r < gridRows; r++)
             {
-                Vector3 position = CellToWorldPosition(r, vLine, horizontal: false);
-                Quaternion rotation = Quaternion.Euler(0f,90f,0f);
-                var wallObj = InstantiateRandomNoDoorWall(position, rotation);
-                if (wallObj != null)
-                {
-                    int roomA = cellRoomIds[r, vLine-1];
-                    int roomB = cellRoomIds[r, vLine];
+                Vector3 pos = CellToWorldPosition(r, vLine, horizontal: false);
+                Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
+                GameObject wallObj = InstantiateRandomNoDoorWall(pos, rot);
+                if (wallObj == null) continue;
 
-                    placedWalls.Add(new WallInfo {
-                        wallObject = wallObj,
-                        roomA = roomA,
-                        roomB = roomB,
-                        hasDoor = false,
-                        isHorizontal = false,
-                        lineIndex = vLine,
-                        cellIndex = r
-                    });
-                }
+                int roomA = cellRoomIds[r, vLine - 1];
+                int roomB = cellRoomIds[r, vLine];
+
+                placedWalls.Add(new WallInfo
+                {
+                    wallObject   = wallObj,
+                    roomA        = roomA,
+                    roomB        = roomB,
+                    hasDoor      = false,
+                    isHorizontal = false,
+                    lineIndex    = vLine,
+                    cellIndex    = r
+                });
             }
         }
     }
 
     private void ReplaceOneWallWithDoor()
     {
-        if (placedWalls.Count == 0 || wallPrefabsWithDoor == null || wallPrefabsWithDoor.Length == 0)
-            return;
+        if (placedWalls.Count == 0 || wallPrefabsWithDoor == null || wallPrefabsWithDoor.Length == 0) return;
 
-        int index = Random.Range(0, placedWalls.Count);
-        WallInfo chosenWall = placedWalls[index];
+        int idx = Random.Range(0, placedWalls.Count);
+        WallInfo w = placedWalls[idx];
 
-        Vector3 pos = chosenWall.wallObject.transform.position;
-        Quaternion rot = chosenWall.wallObject.transform.rotation;
+        Vector3 pos = w.wallObject.transform.position;
+        Quaternion rot = w.wallObject.transform.rotation;
+        Destroy(w.wallObject);
+        placedWalls.RemoveAt(idx);
 
-        Destroy(chosenWall.wallObject);
-        placedWalls.RemoveAt(index);
+        GameObject prefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
+        GameObject newWall = Instantiate(prefab, pos, rot, transform);
 
-        GameObject doorWallPrefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
-        GameObject newWall = Instantiate(doorWallPrefab, pos, rot, transform);
-
-        chosenWall.wallObject = newWall;
-        chosenWall.hasDoor = true;
-        placedWalls.Add(chosenWall);
+        w.wallObject = newWall;
+        w.hasDoor    = true;
+        placedWalls.Add(w);
     }
 
     private void EnsureAllSubRoomsHaveDoor()
     {
-        Dictionary<int, List<WallInfo>> roomToWalls = BuildRoomToWallsDict();
-
-        foreach (var kvp in roomCells)
+        var roomToWalls = BuildRoomToWallsDict();
+        foreach (int roomId in roomCells.Keys)
         {
-            int roomId = kvp.Key;
-            if (roomId == 0) continue;
+            if (roomId == 0 || !roomToWalls.ContainsKey(roomId)) continue;
+            bool hasDoor = roomToWalls[roomId].Exists(w => w.hasDoor);
+            if (hasDoor) continue;
 
-            if (!roomToWalls.ContainsKey(roomId)) continue;
-
-            bool hasDoor = false;
-            foreach (var w in roomToWalls[roomId])
-            {
-                if (w.hasDoor)
-                {
-                    hasDoor = true;
-                    break;
-                }
-            }
-
-            if (!hasDoor)
-            {
-                // Pas de porte, on en ajoute une
-                WallInfo candidate = null;
-                foreach (var w in roomToWalls[roomId])
-                {
-                    if (!w.hasDoor)
-                    {
-                        candidate = w;
-                        break;
-                    }
-                }
-
-                if (candidate != null && wallPrefabsWithDoor.Length > 0)
-                {
-                    Vector3 pos = candidate.wallObject.transform.position;
-                    Quaternion rot = candidate.wallObject.transform.rotation;
-
-                    Destroy(candidate.wallObject);
-
-                    GameObject doorWallPrefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
-                    GameObject newWall = Instantiate(doorWallPrefab, pos, rot, transform);
-
-                    candidate.wallObject = newWall;
-                    candidate.hasDoor = true;
-                }
-            }
+            // Choisir la première cloison sans porte et la transformer
+            WallInfo candidate = roomToWalls[roomId].Find(w => !w.hasDoor);
+            if (candidate != null) AddDoorToWall(candidate);
         }
     }
 
     private void EnsureFullConnectivity()
     {
-        // On utilise un Union-Find (ou Disjoint Set) pour vérifier la connectivité.
         var rooms = new List<int>(roomCells.Keys);
-        if (rooms.Count <= 1) return; // Une seule salle ou aucune, déjà connecté
+        if (rooms.Count <= 1) return;
 
-        Dictionary<int, List<WallInfo>> roomToWalls = BuildRoomToWallsDict();
+        var roomToWalls = BuildRoomToWallsDict();
 
-        // Initialiser le Union-Find
+        // Union‑Find
         var parent = new Dictionary<int, int>();
-        foreach (var r in rooms)
-            parent[r] = r;
+        foreach (int r in rooms) parent[r] = r;
 
-        System.Func<int,int> find = null;
-        find = (x) => (parent[x] == x) ? x : (parent[x] = find(parent[x]));
+        System.Func<int, int> find = null;
+        find = (x) => parent[x] == x ? x : (parent[x] = find(parent[x]));
 
-        System.Action<int,int> unionSet = (a,b) => {
+        System.Action<int, int> unionSet = (a, b) =>
+        {
             a = find(a);
             b = find(b);
             if (a != b) parent[b] = a;
         };
 
-        // Unir toutes les salles déjà connectées par des portes
-        foreach (var w in placedWalls)
-        {
-            if (w.hasDoor)
-                unionSet(w.roomA, w.roomB);
-        }
+        // Unir les salles déjà connectées par des portes
+        foreach (WallInfo w in placedWalls) if (w.hasDoor) unionSet(w.roomA, w.roomB);
 
-        // Vérifier si tout est dans la même composante
-        // Si non, on tente d'ajouter des portes jusqu'à ce que ce soit le cas ou qu'on manque de possibilités.
+        // Tant qu’il existe plusieurs composantes, on ajoute des portes
         while (!AllInOneSet(rooms, find))
         {
-            // On a plusieurs composantes, on va essayer de connecter deux composantes en ajoutant une porte
-            // Sélectionner un mur sans porte qui sépare deux salles de composantes différentes
-            WallInfo candidate = null;
-            foreach (var w in placedWalls)
-            {
-                if (!w.hasDoor)
-                {
-                    int ra = find(w.roomA);
-                    int rb = find(w.roomB);
-                    if (ra != rb)
-                    {
-                        candidate = w;
-                        break;
-                    }
-                }
-            }
-
+            WallInfo candidate = placedWalls.Find(w => !w.hasDoor && find(w.roomA) != find(w.roomB));
             if (candidate == null)
             {
-                // Plus de mur possible pour connecter les composantes, on abandonne
-                // Cela signifie qu'il existe des parties inatteignables.
-                Debug.LogWarning("Impossible de connecter toutes les salles, certaines zones resteront inexplorables.");
+                Debug.LogWarning("Impossible de connecter toutes les sous‑salles");
                 break;
             }
-            else
-            {
-                // On ajoute une porte dans ce mur pour connecter ces deux composantes
-                AddDoorToWall(candidate);
-                // Unir les composantes
-                unionSet(candidate.roomA, candidate.roomB);
-            }
+            AddDoorToWall(candidate);
+            unionSet(candidate.roomA, candidate.roomB);
         }
     }
+    #endregion
 
-    private bool AllInOneSet(List<int> rooms, System.Func<int,int> find)
+    #region Export / Import
+    /// <summary>
+    /// Export minimal pour la sauvegarde JSON.
+    /// </summary>
+    public PartitionSaveData ExportPartition()
+    {
+        return new PartitionSaveData
+        {
+            horizontalPartitions = new List<int>(horizontalPartitions),
+            verticalPartitions   = new List<int>(verticalPartitions),
+            doors = placedWalls
+                .FindAll(w => w.hasDoor)
+                .ConvertAll<WallDoorInfo>(w => new WallDoorInfo
+                {
+                    isHorizontal = w.isHorizontal,
+                    lineIndex    = w.lineIndex,
+                    cellIndex    = w.cellIndex
+                })
+        };
+    }
+
+    /// <summary>
+    /// Reconstruit la configuration à partir de données sauvegardées.
+    /// </summary>
+    public void ImportPartition(PartitionSaveData data)
+    {
+        horizontalPartitions = new List<int>(data.horizontalPartitions);
+        verticalPartitions   = new List<int>(data.verticalPartitions);
+
+        DetermineSubRooms();
+        PlaceNoDoorWalls();
+
+        // Re‑place exactement les mêmes portes
+        foreach (WallDoorInfo d in data.doors)
+        {
+            WallInfo w = placedWalls.Find(p =>
+                p.isHorizontal == d.isHorizontal &&
+                p.lineIndex    == d.lineIndex    &&
+                p.cellIndex    == d.cellIndex);
+            if (w != null && !w.hasDoor) AddDoorToWall(w);
+        }
+    }
+    #endregion
+
+    #region Helpers
+    private bool AllInOneSet(List<int> rooms, System.Func<int, int> find)
     {
         int root = find(rooms[0]);
-        for (int i = 1; i < rooms.Count; i++)
-        {
-            if (find(rooms[i]) != root)
-                return false;
-        }
+        for (int i = 1; i < rooms.Count; i++) if (find(rooms[i]) != root) return false;
         return true;
     }
 
@@ -373,37 +350,30 @@ public class InternalPartitionGenerator : MonoBehaviour
         if (wallPrefabsWithDoor == null || wallPrefabsWithDoor.Length == 0) return;
         Vector3 pos = w.wallObject.transform.position;
         Quaternion rot = w.wallObject.transform.rotation;
-
         Destroy(w.wallObject);
-
-        GameObject doorWallPrefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
-        GameObject newWall = Instantiate(doorWallPrefab, pos, rot, transform);
-
-        w.wallObject = newWall;
-        w.hasDoor = true;
+        GameObject prefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
+        w.wallObject = Instantiate(prefab, pos, rot, transform);
+        w.hasDoor    = true;
     }
 
     private Dictionary<int, List<WallInfo>> BuildRoomToWallsDict()
     {
-        Dictionary<int, List<WallInfo>> roomToWalls = new Dictionary<int, List<WallInfo>>();
-        foreach (var w in placedWalls)
+        var dict = new Dictionary<int, List<WallInfo>>();
+        foreach (WallInfo w in placedWalls)
         {
-            if (!roomToWalls.ContainsKey(w.roomA))
-                roomToWalls[w.roomA] = new List<WallInfo>();
-            if (!roomToWalls.ContainsKey(w.roomB))
-                roomToWalls[w.roomB] = new List<WallInfo>();
-
-            roomToWalls[w.roomA].Add(w);
-            roomToWalls[w.roomB].Add(w);
+            if (!dict.ContainsKey(w.roomA)) dict[w.roomA] = new List<WallInfo>();
+            if (!dict.ContainsKey(w.roomB)) dict[w.roomB] = new List<WallInfo>();
+            dict[w.roomA].Add(w);
+            dict[w.roomB].Add(w);
         }
-        return roomToWalls;
+        return dict;
     }
 
     private GameObject InstantiateRandomNoDoorWall(Vector3 position, Quaternion rotation)
     {
         if (wallPrefabsNoDoor == null || wallPrefabsNoDoor.Length == 0)
         {
-            Debug.LogWarning("Aucun prefab de cloison sans porte disponible.");
+            Debug.LogWarning("Aucun prefab de mur sans porte disponible.");
             return null;
         }
         GameObject prefab = wallPrefabsNoDoor[Random.Range(0, wallPrefabsNoDoor.Length)];
@@ -412,17 +382,17 @@ public class InternalPartitionGenerator : MonoBehaviour
 
     private Vector3 CellToWorldPosition(int row, int col, bool horizontal)
     {
-        float yPos = 3f; 
+        float yPos = 3f;
         if (horizontal)
         {
             float lineZ = -roomDimensions.z * 0.5f + row * cellHeight;
-            float colX = -roomDimensions.x * 0.5f + col * cellWidth + cellWidth * 0.5f;
+            float colX  = -roomDimensions.x * 0.5f + col * cellWidth + cellWidth * 0.5f;
             return transform.TransformPoint(new Vector3(colX, yPos, lineZ));
         }
         else
         {
             float lineX = -roomDimensions.x * 0.5f + col * cellWidth;
-            float rowZ = -roomDimensions.z * 0.5f + row * cellHeight + cellHeight * 0.5f;
+            float rowZ  = -roomDimensions.z * 0.5f + row * cellHeight + cellHeight * 0.5f;
             return transform.TransformPoint(new Vector3(lineX, yPos, rowZ));
         }
     }
@@ -432,47 +402,36 @@ public class InternalPartitionGenerator : MonoBehaviour
         for (int i = 0; i < list.Count; i++)
         {
             int r = Random.Range(i, list.Count);
-            T tmp = list[i];
-            list[i] = list[r];
-            list[r] = tmp;
+            (list[i], list[r]) = (list[r], list[i]);
         }
     }
+    #endregion
 
+    #region Debug / Gizmos
     private void OnDrawGizmos()
     {
-        // Dessine la limite de la pièce
+        // Limite générale
         Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(transform.position + new Vector3(0, roomDimensions.y * 0.5f, 0), roomDimensions);
 
         if (Application.isPlaying && cellRoomIds != null)
         {
-            // Afficher les sous-salles en couleur
             for (int r = 0; r < gridRows; r++)
             {
                 for (int c = 0; c < gridColumns; c++)
                 {
-                    int rid = cellRoomIds[r,c];
-                    if (roomColors.ContainsKey(rid))
-                    {
-                        Gizmos.color = roomColors[rid];
-                    }
-                    else
-                    {
-                        Gizmos.color = Color.gray;
-                    }
-
+                    int rid = cellRoomIds[r, c];
+                    Gizmos.color = roomColors.ContainsKey(rid) ? roomColors[rid] : Color.gray;
                     Vector3 center = transform.position + new Vector3(
                         (-roomDimensions.x * 0.5f) + c * cellWidth + cellWidth * 0.5f,
                         0f,
-                        (-roomDimensions.z * 0.5f) + r * cellHeight + cellHeight * 0.5f
-                    );
-
+                        (-roomDimensions.z * 0.5f) + r * cellHeight + cellHeight * 0.5f);
                     Gizmos.DrawCube(center, new Vector3(cellWidth, 0.01f, cellHeight));
                 }
             }
         }
 
-        // Dessine la grille
+        // Grille
         if (gridRows > 0 && gridColumns > 0)
         {
             Gizmos.color = Color.yellow;
@@ -481,21 +440,39 @@ public class InternalPartitionGenerator : MonoBehaviour
             float rowStep = roomDimensions.z / gridRows;
             float colStep = roomDimensions.x / gridColumns;
 
-            // Lignes horizontales
             for (int i = 0; i <= gridRows; i++)
             {
-                Vector3 start = transform.position + new Vector3(-halfX, 0f, -halfZ + i * rowStep);
-                Vector3 end = transform.position + new Vector3(halfX, 0f, -halfZ + i * rowStep);
-                Gizmos.DrawLine(start, end);
+                Vector3 a = transform.position + new Vector3(-halfX, 0, -halfZ + i * rowStep);
+                Vector3 b = transform.position + new Vector3( halfX, 0, -halfZ + i * rowStep);
+                Gizmos.DrawLine(a, b);
             }
-
-            // Lignes verticales
             for (int j = 0; j <= gridColumns; j++)
             {
-                Vector3 start = transform.position + new Vector3(-halfX + j * colStep, 0f, -halfZ);
-                Vector3 end = transform.position + new Vector3(-halfX + j * colStep, 0f, halfZ);
-                Gizmos.DrawLine(start, end);
+                Vector3 a = transform.position + new Vector3(-halfX + j * colStep, 0, -halfZ);
+                Vector3 b = transform.position + new Vector3(-halfX + j * colStep, 0,  halfZ);
+                Gizmos.DrawLine(a, b);
             }
         }
     }
+    #endregion
+}
+
+// ============================================================================
+// Structures sérialisables pour la sauvegarde JSON
+// ----------------------------------------------------------------------------
+
+[System.Serializable]
+public class WallDoorInfo
+{
+    public bool isHorizontal;
+    public int  lineIndex;
+    public int  cellIndex;
+}
+
+[System.Serializable]
+public class PartitionSaveData
+{
+    public List<int> horizontalPartitions;
+    public List<int> verticalPartitions;
+    public List<WallDoorInfo> doors;
 }

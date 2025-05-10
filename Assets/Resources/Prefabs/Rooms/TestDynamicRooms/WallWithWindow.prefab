@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 834443209041744966}
   - component: {fileID: 5490263897218250897}
   - component: {fileID: 3147523861169273041}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: Plane (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -255,7 +255,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0.039215688, g: 0.16470589, b: 0.36862746, a: 1}
-  m_Intensity: 1.5
+  m_Intensity: 3
   m_Range: 20.78
   m_SpotAngle: 115
   m_InnerSpotAngle: 6
@@ -349,7 +349,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0, g: 0.3166628, b: 0.7075472, a: 1}
-  m_Intensity: 1.35
+  m_Intensity: 1.6
   m_Range: 9.11
   m_SpotAngle: 18.7195
   m_InnerSpotAngle: 1
@@ -411,7 +411,7 @@ GameObject:
   - component: {fileID: 8640791523028024078}
   - component: {fileID: 8858471044356000931}
   - component: {fileID: 3365083232747413836}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: Plane (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -549,7 +549,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0.039215688, g: 0.16470589, b: 0.36862746, a: 1}
-  m_Intensity: 1.5
+  m_Intensity: 3
   m_Range: 20.78
   m_SpotAngle: 115
   m_InnerSpotAngle: 6
@@ -643,7 +643,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0.039215688, g: 0.16470589, b: 0.36862746, a: 1}
-  m_Intensity: 1.5
+  m_Intensity: 3
   m_Range: 20.78
   m_SpotAngle: 115
   m_InnerSpotAngle: 6
@@ -737,7 +737,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0, g: 0.3166628, b: 0.7075472, a: 1}
-  m_Intensity: 1.35
+  m_Intensity: 1.6
   m_Range: 9.11
   m_SpotAngle: 18.7195
   m_InnerSpotAngle: 1
@@ -1287,7 +1287,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0, g: 0.3166628, b: 0.7075472, a: 1}
-  m_Intensity: 1.35
+  m_Intensity: 1.6
   m_Range: 9.11
   m_SpotAngle: 18.7195
   m_InnerSpotAngle: 1
@@ -1349,7 +1349,7 @@ GameObject:
   - component: {fileID: 4553410759612803705}
   - component: {fileID: 7524961816552524451}
   - component: {fileID: 1099465412746021892}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: Plane (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1487,7 +1487,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0, g: 0.3166628, b: 0.7075472, a: 1}
-  m_Intensity: 1.35
+  m_Intensity: 1.6
   m_Range: 9.11
   m_SpotAngle: 18.7195
   m_InnerSpotAngle: 1
@@ -1654,7 +1654,7 @@ GameObject:
   - component: {fileID: 7334916719101500712}
   - component: {fileID: 5146177004662891858}
   - component: {fileID: 7607072402309068556}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1886,7 +1886,7 @@ Light:
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0.039215688, g: 0.16470589, b: 0.36862746, a: 1}
-  m_Intensity: 1.5
+  m_Intensity: 3
   m_Range: 20.78
   m_SpotAngle: 115
   m_InnerSpotAngle: 6

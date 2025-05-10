@@ -1,6 +1,7 @@
 // PlayerInteraction.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerInteraction : MonoBehaviour
@@ -22,6 +23,10 @@ public class PlayerInteraction : MonoBehaviour
     private Camera playerCamera;
     private Rigidbody heldObject;  // L'objet qu'on tient
 
+    [Header("UI")]
+    public Image interactionIcon;
+
+    
     private void Start()
     {
         playerCamera = Camera.main;
@@ -31,13 +36,14 @@ public class PlayerInteraction : MonoBehaviour
     {
         // 1) Gérer le highlight en raycastant
         CheckHighlight();
-
-        // 2) Si on tient un objet physique, on continue de le déplacer
-        if (heldObject != null)
-        {
-            MoveHeldObject();
-        }
     }
+    
+    private void FixedUpdate()
+    {
+        if (heldObject != null)
+            MoveHeldObject();
+    }
+
 
     // Méthode InputSystem (par exemple "OnInteract" mappé à E)
     public void OnInteract(InputValue value)
@@ -48,38 +54,54 @@ public class PlayerInteraction : MonoBehaviour
     #region Highlight
     void CheckHighlight()
     {
+        // Si un objet est tenu, on n'affiche pas d'icône ni de highlight
+        if (heldObject != null)
+        {
+            DisableHighlight();
+            if (interactionIcon != null && interactionIcon.enabled)
+                interactionIcon.enabled = false;
+            return;
+        }
+
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
 
         if (Physics.Raycast(ray, out RaycastHit hit, raycastRange, raycastLayer))
         {
-            // Vérifie s’il y a un IInteractable
             IInteractable interactable = hit.collider.GetComponent<IInteractable>()
-                ?? hit.collider.GetComponentInParent<IInteractable>();
+                                         ?? hit.collider.GetComponentInParent<IInteractable>();
 
-            if (interactable != null)
+            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+
+            if (interactable != null || rb != null)
             {
-                // On récupère OutlineMeshCreator pour le surlignage
-                OutlineMeshCreator outline = hit.collider.GetComponent<OutlineMeshCreator>()
-                    ?? hit.collider.GetComponentInParent<OutlineMeshCreator>();
-
-                // Si c'est un nouvel objet, on désactive l'ancien highlight
-                if (hit.collider.gameObject != highlightedObject)
+                if (interactable != null)
                 {
-                    DisableHighlight();
+                    OutlineMeshCreator outline = hit.collider.GetComponent<OutlineMeshCreator>()
+                                                 ?? hit.collider.GetComponentInParent<OutlineMeshCreator>();
 
-                    highlightedObject = hit.collider.gameObject;
-                    currentOutline = outline;
-
-                    if (currentOutline != null)
-                        currentOutline.SetHighlight(true);
+                    if (hit.collider.gameObject != highlightedObject)
+                    {
+                        DisableHighlight();
+                        highlightedObject = hit.collider.gameObject;
+                        currentOutline = outline;
+                        if (currentOutline != null)
+                            currentOutline.SetHighlight(true);
+                    }
                 }
+
+                if (interactionIcon != null && !interactionIcon.enabled)
+                    interactionIcon.enabled = true;
+
                 return;
             }
         }
 
-        // Si pas d'IInteractable détecté, désactiver highlight
         DisableHighlight();
+        if (interactionIcon != null && interactionIcon.enabled)
+            interactionIcon.enabled = false;
     }
+
+    /// <summary>
 
     void DisableHighlight()
     {

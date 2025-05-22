@@ -1,7 +1,9 @@
-    using UnityEngine;
-    using UnityEngine.InputSystem;
-    namespace PlayerScripts 
-    {
+using UnityEngine;
+using UnityEngine.InputSystem;
+    
+    
+namespace PlayerScripts 
+{
     [RequireComponent(typeof(CharacterController))]
 
     public class FirstPersonController : MonoBehaviour
@@ -90,6 +92,12 @@
             cameraPitch = Mathf.Clamp(cameraPitch, -maxLookAngle, maxLookAngle);
             cameraTransform.localRotation = Quaternion.Euler(cameraPitch, 0, 0);
         }
+        
+        public void SetCameraLock(bool locked)
+        {
+            isCursorLocked = !locked;
+        }
+
 
         private void ApplyGravityAndJump()
         {

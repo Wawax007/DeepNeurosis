@@ -218,6 +218,58 @@ public class InternalPartitionGenerator : MonoBehaviour
             }
         }
     }
+    public List<Vector3> GetCentersOfAllRooms()
+    {
+        List<Vector3> centers = new List<Vector3>();
+
+        foreach (var kvp in roomCells)
+        {
+            List<Vector2Int> cells = kvp.Value;
+            Vector2 center = Vector2.zero;
+
+            foreach (var cell in cells)
+            {
+                center += new Vector2(cell.x, cell.y);
+            }
+
+            center /= cells.Count;
+            centers.Add(CellToWorld(center.x, center.y));
+        }
+
+        return centers;
+    }
+    
+    public Vector3 GetCenterOfLargestSubRoom()
+    {
+        int largest = 0;
+        int maxCount = 0;
+
+        foreach (var kvp in roomCells)
+        {
+            if (kvp.Value.Count > maxCount)
+            {
+                maxCount = kvp.Value.Count;
+                largest = kvp.Key;
+            }
+        }
+
+        if (!roomCells.ContainsKey(largest)) return transform.position;
+
+        List<Vector2Int> cells = roomCells[largest];
+        Vector2 center = Vector2.zero;
+        foreach (var c in cells) center += new Vector2(c.x, c.y);
+        center /= cells.Count;
+
+        return CellToWorld(center.x, center.y);
+    }
+
+    private Vector3 CellToWorld(float gridX, float gridY)
+    {
+        float x = (-roomDimensions.x * 0.5f) + gridX * (roomDimensions.x / gridColumns) + (roomDimensions.x / gridColumns) / 2f;
+        float z = (-roomDimensions.z * 0.5f) + gridY * (roomDimensions.z / gridRows) + (roomDimensions.z / gridRows) / 2f;
+        return transform.TransformPoint(new Vector3(x, 0f, z));
+    }
+
 
     private void ReplaceOneWallWithDoor()
     {

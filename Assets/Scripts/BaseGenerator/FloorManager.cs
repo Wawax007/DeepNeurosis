@@ -33,13 +33,16 @@ public class FloorManager : MonoBehaviour
         // FLOOR -2 → StartRoom
         if (currentFloor == -2)
         {
+            baseGenerator.ClearOldData();
             baseGenerator.IsFloorReady = true;
+
             SetStartRoomActive(true); 
-                
+
             Debug.Log("[FloorManager] StartRoom already in scene. No generation or loading required.");
             StartCoroutine(WaitForFloorReady());
             return;
         }
+
 
         // AUTRES ÉTAGES
         if (FloorSaveExists(currentFloor))
@@ -48,6 +51,16 @@ public class FloorManager : MonoBehaviour
         }
         else
         {
+            if (RunEnigmaManager.Instance != null)
+            {
+                if (RunEnigmaManager.Instance.currentEnigma == null)
+                    RunEnigmaManager.Instance.ChooseEnigmaForRun();
+            }
+            else
+            {
+                Debug.LogError("[FloorManager] RunEnigmaManager.Instance is null. Cannot choose enigma for the run.");
+            }
+
             baseGenerator.GenerateFloor(currentFloor);
         }
 
@@ -61,13 +74,10 @@ public class FloorManager : MonoBehaviour
         if (currentFloor == -2)
         {
             SetStartRoomActive(false); 
+            return;
         }
 
-        else
-        {
-            // Pour les autres étages, on les sauvegarde
-            SaveFloorToJson(currentFloor);
-        }
+        SaveFloorToJson(currentFloor);
         // Note: la destruction des salles générées est gérée par BaseGenerator lorsqu’on regénère.
     }
 

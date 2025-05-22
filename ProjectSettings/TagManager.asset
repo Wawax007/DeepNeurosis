@@ -9,6 +9,13 @@ TagManager:
   - NorthWall
   - WestWall
   - Fuse
+  - ExtractionRoom
+  - ConsoleAnchor
+  - PosterAnchor
+  - Anchor
+  - FloorAnchor
+  - ClueProp
+  - ClueProps
   layers:
   - Default
   - TransparentFX

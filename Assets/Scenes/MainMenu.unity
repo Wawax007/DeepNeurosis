@@ -174,7 +174,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: ddadb14771b75e6409441b2655a508b4, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 4b3627cf0ea469f439c3bd0b8a60198d, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -273,7 +273,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioSource: {fileID: 14622951}
-  fadeDuration: 5
+  fadeDuration: 2
 --- !u!1 &167432410
 GameObject:
   m_ObjectHideFlags: 0

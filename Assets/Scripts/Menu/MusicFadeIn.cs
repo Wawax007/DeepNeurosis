@@ -20,7 +20,7 @@ public class MusicFadeIn : MonoBehaviour
 
     private System.Collections.IEnumerator FadeIn()
     {
-        float targetVolume = 1f;
+        float targetVolume = 0.8f;
         float currentTime = 0f;
 
         while (currentTime < fadeDuration)

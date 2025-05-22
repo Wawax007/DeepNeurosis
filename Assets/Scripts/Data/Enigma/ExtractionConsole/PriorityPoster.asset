@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f75e582ed55334eb15e3b6a78dab3f, type: 3}
+  m_Name: PriorityPoster
+  m_EditorClassIdentifier: 
+  enigmaId: PRIORITY_POSTER
+  cluePrefab: {fileID: 4648890818539361580, guid: 3ce2d2c39926ea54c9d7a874a81f95fe, type: 3}
+  audioHint: {fileID: 0}
+  posterHint: {fileID: 0}
+  propType: 1

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using ExtractionConsole.Module;
 using UnityEngine;
 
 /// <summary>
@@ -23,18 +24,27 @@ public class BaseGenerator : MonoBehaviour
     private readonly Dictionary<Vector2, RoomData> roomPositions = new Dictionary<Vector2, RoomData>();
     private readonly List<RoomExportData> exportedRoomData = new List<RoomExportData>();
 
+    
     public bool IsFloorReady { get; set; }
 
-    #region Public API
+    #region Public API
     /// <summary>
     /// Génère un nouvel étage "propre" de façon procédurale.
     /// </summary>
     public void GenerateFloor(int floorIndex)
     {
+        if (floorIndex == -2)
+        {
+            Debug.LogWarning("[BaseGenerator] StartRoom should not be procedurally generated.");
+            IsFloorReady = true; // Évite un blocage d'attente
+            return;
+        }
+
         ClearOldData();
         Debug.Log($"[BaseGenerator] Generating floor {floorIndex} …");
         StartCoroutine(GenerateMapCoroutine(floorIndex));
     }
+
 
     /// <summary>
     /// Construit un étage depuis des données sauvegardées.
@@ -46,22 +56,127 @@ public class BaseGenerator : MonoBehaviour
 
         foreach (var roomInfo in floorData.rooms)
         {
-            Vector2 pos      = roomInfo.position;
-            GameObject room  = InstantiateRoom(pos);
+            Vector2 pos = roomInfo.position;
+            GameObject room = InstantiateRoom(pos, floorData.floorIndex);
 
-            // Ré‑applique le seed aux générateurs internes
             var partGen = room.GetComponent<InternalPartitionGenerator>();
             if (partGen != null) partGen.SetSeed(roomInfo.partitionSeed);
 
-            // On partage la même instance du tableau walls entre les deux structures
             bool[] walls = (bool[])roomInfo.walls.Clone();
             roomPositions.Add(pos, new RoomData(room, walls));
             exportedRoomData.Add(new RoomExportData(pos, walls, roomInfo.partitionSeed));
         }
 
-        // Ajuste murs/portes au cas où le format sauvegardé est ancien
         AdjustRoomWalls();
         CheckDoorErrors();
+
+        foreach (var clue in floorData.placedClueProps)
+        {
+            var prefab = Resources.Load<GameObject>("CluePrefabs/" + clue.prefabName);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[BaseGenerator] Prefab '{clue.prefabName}' introuvable dans Resources/CluePrefabs/");
+                continue;
+            }
+
+            GameObject instance = Instantiate(prefab, clue.position, clue.rotation, transform);
+
+            var moduleItem = instance.GetComponent<ModuleItem>();
+            bool mustBeInserted = false;
+
+            if (!string.IsNullOrEmpty(clue.moduleType) && floorData.consoleState != null)
+            {
+                if (clue.moduleType == "Security" && floorData.consoleState.securityInserted)
+                    mustBeInserted = true;
+                else if (clue.moduleType == "Navigation" && floorData.consoleState.navigationInserted)
+                    mustBeInserted = true;
+            }
+
+            if (mustBeInserted)
+            {
+                var allSockets = GameObject.FindObjectsOfType<ModuleSocket>();
+                foreach (var socket in allSockets)
+                {
+                    if (socket.requiredType.ToString() == clue.moduleType)
+                    {
+                        if (moduleItem != null)
+                        {
+                            socket.ForceFill(instance.GetComponent<Collider>());
+                            socket.InitDiode();
+                            CluePropTracker.MarkUsed(clue.enigmaId);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[LoadFloorFromData] Module {clue.moduleType} marqué comme inséré mais prefab sans ModuleItem.");
+                        }
+
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                var rb = instance.GetComponent<Rigidbody>();
+                if (rb != null) rb.isKinematic = false;
+                var col = instance.GetComponent<Collider>();
+                if (col != null) col.enabled = true;
+            }
+
+
+            PropPlacer.tempPlacedClues.Add(new SavedClueProp {
+                enigmaId = clue.enigmaId,
+                prefabName = clue.prefabName,
+                position = clue.position,
+                rotation = clue.rotation,
+                used = clue.used,
+                moduleType = clue.moduleType
+            });
+        }
+
+        if (floorData.consoleState != null)
+        {
+            var console = GameObject.FindObjectOfType<ExtractionConsoleLogic>();
+            if (console != null)
+            {
+                console.SetValue(RotarySelector.SelectorType.Priority, floorData.consoleState.selectedPriority);
+                console.SetValue(RotarySelector.SelectorType.Protocol, floorData.consoleState.selectedProtocol);
+                console.SetValue(RotarySelector.SelectorType.Destination, floorData.consoleState.selectedDestination);
+
+                foreach (var selector in console.GetComponentsInChildren<RotarySelector>())
+                {
+                    switch (selector.type)
+                    {
+                        case RotarySelector.SelectorType.Priority:
+                            selector.SetIndexFromValue(floorData.consoleState.selectedPriority);
+                            break;
+                        case RotarySelector.SelectorType.Protocol:
+                            selector.SetIndexFromValue(floorData.consoleState.selectedProtocol);
+                            break;
+                        case RotarySelector.SelectorType.Destination:
+                            selector.SetIndexFromValue(floorData.consoleState.selectedDestination);
+                            break;
+                    }
+                }
+            }
+            
+            if (floorData.consoleState.consoleValidated)
+            {
+                console.sequenceDiodeRenderer.material = console.diodeOnMaterial;
+                if (console.validateButtonScript != null)
+                {
+                    console.validateButtonScript.ForcePressVisualOnly();
+                }
+
+
+                // important si d'autres scripts veulent vérifier ça :
+                var validatedField = typeof(ExtractionConsoleLogic)
+                    .GetField("isValidated", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (validatedField != null)
+                    validatedField.SetValue(console, true);
+            }
+
+        }
+
 
         IsFloorReady = true;
     }
@@ -71,6 +186,8 @@ public class BaseGenerator : MonoBehaviour
     /// </summary>
     public FloorSaveData GetFloorData(int floorIndex)
     {
+        
+        
         // S'assure que les murs dans exportedRoomData sont à jour
         foreach (var export in exportedRoomData)
         {
@@ -79,13 +196,42 @@ public class BaseGenerator : MonoBehaviour
                 data.walls.CopyTo(export.walls, 0);
             }
         }
+        
+        var console = GameObject.FindObjectOfType<ExtractionConsoleLogic>();
+        SavedConsoleState state = null;
+        
+        if (console != null)
+        {
+            console.InitRotarySelectors(); // 🔧 Assure la synchro
+            state = new SavedConsoleState
+            {
+                securityInserted = console.socketSecurity.IsFilled,
+                navigationInserted = console.socketNavigation.IsFilled,
+                selectedPriority = console.GetCurrentValue(RotarySelector.SelectorType.Priority),
+                selectedProtocol = console.GetCurrentValue(RotarySelector.SelectorType.Protocol),
+                selectedDestination = console.GetCurrentValue(RotarySelector.SelectorType.Destination),
+                consoleValidated = console.IsValidated 
+            };
+
+        }
+
+        foreach (var clue in PropPlacer.tempPlacedClues)
+        {
+            if (clue.moduleType == "Security" && console != null && console.socketSecurity.IsFilled)
+                clue.used = true;
+            else if (clue.moduleType == "Navigation" && console != null && console.socketNavigation.IsFilled)
+                clue.used = true;
+        }
 
         return new FloorSaveData
         {
             floorIndex = floorIndex,
-            rooms      = new List<RoomExportData>(exportedRoomData)
+            rooms = new List<RoomExportData>(exportedRoomData),
+            placedClueProps = new List<SavedClueProp>(PropPlacer.tempPlacedClues),
+            consoleState = state
         };
     }
+
     #endregion
 
     #region Generation
@@ -95,7 +241,7 @@ public class BaseGenerator : MonoBehaviour
         Vector2 startGridPos = Vector2.zero;
         Debug.Log($"Generating first room at grid {startGridPos}");
 
-        GameObject startRoom = InstantiateRoom(startGridPos);
+        GameObject startRoom = InstantiateRoom(startGridPos, floorIndex);
         int startSeed = Random.Range(int.MinValue, int.MaxValue);
 
         var startPartGen = startRoom.GetComponent<InternalPartitionGenerator>();
@@ -130,7 +276,7 @@ public class BaseGenerator : MonoBehaviour
                 roomPos = GetRandomAdjacentPosition();
             } while (roomPositions.ContainsKey(roomPos));
 
-            GameObject newRoom = InstantiateRoom(roomPos);
+            GameObject newRoom = InstantiateRoom(roomPos, floorIndex);
             int roomSeed = Random.Range(int.MinValue, int.MaxValue);
 
             var partGen = newRoom.GetComponent<InternalPartitionGenerator>();
@@ -144,13 +290,13 @@ public class BaseGenerator : MonoBehaviour
         // 3. Fin de génération – ajuste tout
         AdjustRoomWalls();
         CheckDoorErrors();
-
+        
         IsFloorReady = true;
         yield break;
     }
     #endregion
 
-    #region Room utilities
+    #region Room utilities
     /// <summary>
     /// Calcule les murs/portes internes/externes
     /// </summary>
@@ -224,7 +370,7 @@ public class BaseGenerator : MonoBehaviour
     /// <summary>
     /// Instancie une salle selon sa position "grille" relative.
     /// </summary>
-    private GameObject InstantiateRoom(Vector2 gridPos)
+    private GameObject InstantiateRoom(Vector2 gridPos, int floorIndex)
     {
         float half = roomSize * 0.5f;
         Vector3 offset = new Vector3(
@@ -234,7 +380,14 @@ public class BaseGenerator : MonoBehaviour
         );
 
         Vector3 worldPos = floorAnchor + offset;
-        return Instantiate(roomPrefab, worldPos, Quaternion.identity, transform);
+        GameObject roomObj = Instantiate(roomPrefab, worldPos, Quaternion.identity, transform);
+
+        foreach (var placer in roomObj.GetComponentsInChildren<PropPlacer>())
+        {
+            placer.floorIndex = floorIndex;
+        }
+
+        return roomObj;
     }
 
     /// <summary>
@@ -305,26 +458,45 @@ public class BaseGenerator : MonoBehaviour
     /// <summary>
     /// Détruit les salles existantes avant d'en générer ou charger un nouvel étage
     /// </summary>
-    void ClearOldData()
+    public void ClearOldData()
     {
         foreach (var kvp in roomPositions)
         {
             if (kvp.Value.roomObject != null)
                 Destroy(kvp.Value.roomObject);
         }
+
         roomPositions.Clear();
         exportedRoomData.Clear();
+
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        PropPlacer.tempPlacedClues.Clear();
+        
+        foreach (Transform child in transform)
+        {
+            Debug.Log($"[ClearOldData] Destroying {child.name}");
+            Destroy(child.gameObject);
+        }
+
         IsFloorReady = false;
     }
+
+
     #endregion
 }
 
-#region Data structures
+#region Data structures
 [System.Serializable]
 public class FloorSaveData
 {
     public int floorIndex;
     public List<RoomExportData> rooms;
+    public List<SavedClueProp> placedClueProps = new();
+    public SavedConsoleState consoleState;
 }
 
 [System.Serializable]
@@ -353,4 +525,31 @@ public class RoomData
         this.walls      = walls;
     }
 }
+
+[System.Serializable]
+public class SavedConsoleState
+{
+    public bool securityInserted;
+    public bool navigationInserted;
+    public string selectedPriority;
+    public string selectedProtocol;
+    public string selectedDestination;
+    public bool consoleValidated;
+}
+
+
+[System.Serializable]
+public class SavedClueProp
+{
+    public string enigmaId;
+    public string prefabName;
+    public Vector3 position;
+    public Quaternion rotation;
+    public bool used; 
+    public string moduleType;
+}
+
+
+
+
 #endregion

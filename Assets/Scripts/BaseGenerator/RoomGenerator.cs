@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class RoomGenerator : MonoBehaviour
 {
@@ -13,6 +15,14 @@ public class RoomGenerator : MonoBehaviour
                 isEastWallInstantiated  = false,
                 isWestWallInstantiated  = false;
 
+    
+    public GameObject extractionConsolePrefab;
+    
+
+    [Header("Événement de fin d'initialisation")]
+    public UnityEvent onRoomReady;
+
+
     void Start()
     {
         Debug.Log($"Démarrage de la salle {this.name}. Initialisation des emplacements...");
@@ -22,7 +32,6 @@ public class RoomGenerator : MonoBehaviour
     IEnumerator InitializeRoom()
     {
         float waitTime = 0;
-        // On attend que les transform.Find(...) soient trouvés (selon l'ordre d'initialisation)
         while ((emplacement_N == null || emplacement_S == null || emplacement_E == null || emplacement_W == null) && waitTime < 1f)
         {
             emplacement_N = transform.Find("Emplacement_N");
@@ -30,17 +39,28 @@ public class RoomGenerator : MonoBehaviour
             emplacement_E = transform.Find("Emplacement_E");
             emplacement_W = transform.Find("Emplacement_W");
 
+            Debug.Log($"[RoomGenerator:{name}] Recherche anchors... N={emplacement_N != null}, S={emplacement_S != null}, E={emplacement_E != null}, W={emplacement_W != null}");
+
             waitTime += 0.1f;
             yield return new WaitForSeconds(0.1f);
         }
 
         if (emplacement_N == null || emplacement_S == null || emplacement_E == null || emplacement_W == null)
         {
-            Debug.LogError("Erreur: Un ou plusieurs emplacements de murs sont introuvables.");
+            Debug.LogError($"[RoomGenerator:{name}] ERREUR - Un ou plusieurs emplacements de murs introuvables. Initialisation annulée.");
             yield break;
         }
 
-        Debug.Log("Tous les emplacements sont prêts.");
+        Debug.Log($"[RoomGenerator:{name}] Tous les emplacements trouvés. Initialisation OK.");
+        onRoomReady?.Invoke();
+
+        // ➕ Ajout ici pour placement automatique des props
+        var placer = GetComponent<PropPlacer>();
+        if (placer != null)
+        {
+            Debug.Log($"[RoomGenerator:{name}] Placement des props déclenché.");
+            placer.PlaceClueProps();
+        }
     }
 
     /// <summary>

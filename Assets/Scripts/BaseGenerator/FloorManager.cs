@@ -100,6 +100,11 @@ public class FloorManager : MonoBehaviour
         Rigidbody[] rigidbodies = startRoomObj.GetComponentsInChildren<Rigidbody>();
         foreach (var rb in rigidbodies)
         {
+            if (ElevatorPropTracker.Instance != null && ElevatorPropTracker.Instance.IsInElevator(rb.gameObject))
+            {
+                continue;
+            }
+
             rb.isKinematic = !active;
             rb.detectCollisions = active;
         }

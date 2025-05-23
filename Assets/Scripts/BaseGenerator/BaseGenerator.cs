@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using ExtractionConsole.Module;
 using UnityEngine;
 
@@ -24,6 +25,10 @@ public class BaseGenerator : MonoBehaviour
     private readonly Dictionary<Vector2, RoomData> roomPositions = new Dictionary<Vector2, RoomData>();
     private readonly List<RoomExportData> exportedRoomData = new List<RoomExportData>();
 
+    [SerializeField]
+    private int floorIndex;
+    public int GetFloorIndex() => floorIndex;
+
     
     public bool IsFloorReady { get; set; }
 
@@ -33,13 +38,18 @@ public class BaseGenerator : MonoBehaviour
     /// </summary>
     public void GenerateFloor(int floorIndex)
     {
+        this.floorIndex = floorIndex;
+
         if (floorIndex == -2)
         {
             Debug.LogWarning("[BaseGenerator] StartRoom should not be procedurally generated.");
             IsFloorReady = true; // Évite un blocage d'attente
             return;
         }
-
+        if (PropTransferManager.Instance != null)
+        {
+            PropTransferManager.Instance.MarkPropsInElevatorForPreservation();
+        }      
         ClearOldData();
         Debug.Log($"[BaseGenerator] Generating floor {floorIndex} …");
         StartCoroutine(GenerateMapCoroutine(floorIndex));
@@ -51,7 +61,14 @@ public class BaseGenerator : MonoBehaviour
     /// </summary>
     public void LoadFloorFromData(FloorSaveData floorData)
     {
+        this.floorIndex = floorData.floorIndex;
+        if (PropTransferManager.Instance != null)
+        {
+            PropTransferManager.Instance.MarkPropsInElevatorForPreservation();
+        }
         ClearOldData();
+        PropPlacer.tempPlacedClues.RemoveAll(c => c.currentFloorIndex == floorIndex);
+
         Debug.Log($"[BaseGenerator] Loading floor from JSON data (floorIndex: {floorData.floorIndex})");
 
         foreach (var roomInfo in floorData.rooms)
@@ -123,14 +140,18 @@ public class BaseGenerator : MonoBehaviour
             }
 
 
-            PropPlacer.tempPlacedClues.Add(new SavedClueProp {
+            var saved = new SavedClueProp {
                 enigmaId = clue.enigmaId,
                 prefabName = clue.prefabName,
                 position = clue.position,
                 rotation = clue.rotation,
                 used = clue.used,
-                moduleType = clue.moduleType
-            });
+                moduleType = clue.moduleType,
+                currentFloorIndex = floorIndex,
+                instance = instance
+            };
+            PropPlacer.tempPlacedClues.Add(saved);
+
         }
 
         if (floorData.consoleState != null)
@@ -181,6 +202,7 @@ public class BaseGenerator : MonoBehaviour
         IsFloorReady = true;
     }
 
+
     /// <summary>
     /// Prépare les infos pour la sauvegarde JSON
     /// </summary>
@@ -221,13 +243,25 @@ public class BaseGenerator : MonoBehaviour
                 clue.used = true;
             else if (clue.moduleType == "Navigation" && console != null && console.socketNavigation.IsFilled)
                 clue.used = true;
+            
+            
+            if (clue.instance != null)
+            {
+                clue.position = clue.instance.transform.position;
+                clue.rotation = clue.instance.transform.rotation;
+            }
         }
 
         return new FloorSaveData
         {
             floorIndex = floorIndex,
             rooms = new List<RoomExportData>(exportedRoomData),
-            placedClueProps = new List<SavedClueProp>(PropPlacer.tempPlacedClues),
+            placedClueProps = PropPlacer.tempPlacedClues
+                .Where(c => 
+                    c.instance != null &&
+                    c.currentFloorIndex == floorIndex &&
+                    !ElevatorPropTracker.Instance.IsInElevator(c.instance))
+                .ToList(),
             consoleState = state
         };
     }
@@ -471,17 +505,19 @@ public class BaseGenerator : MonoBehaviour
 
         foreach (Transform child in transform)
         {
+            if (PropTransferManager.Instance != null && 
+                PropTransferManager.Instance.propsToPreserve.Contains(child.gameObject))
+            {
+                child.SetParent(null);
+                continue;
+            }
+
             Destroy(child.gameObject);
         }
+
 
         PropPlacer.tempPlacedClues.Clear();
-        
-        foreach (Transform child in transform)
-        {
-            Debug.Log($"[ClearOldData] Destroying {child.name}");
-            Destroy(child.gameObject);
-        }
-
+    
         IsFloorReady = false;
     }
 
@@ -547,6 +583,8 @@ public class SavedClueProp
     public Quaternion rotation;
     public bool used; 
     public string moduleType;
+    public int currentFloorIndex;
+    [System.NonSerialized] public GameObject instance;
 }
 
 

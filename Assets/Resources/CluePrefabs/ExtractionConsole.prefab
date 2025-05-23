@@ -4040,6 +4040,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 485ea448424213f4497a0c4be7cb776b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 814727613782874213}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 485ea448424213f4497a0c4be7cb776b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4391725810446680679}
   m_SourcePrefab: {fileID: 100100000, guid: 485ea448424213f4497a0c4be7cb776b, type: 3}
 --- !u!4 &1199122552767681945 stripped
 Transform:
@@ -4199,6 +4202,22 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &4391725810446680679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2013094977572228899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c97bf2825ee9b2489e2c79a650be5cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enigmaId: 
+  prefabName: 
+  moduleType: 
+  used: 0
 --- !u!1001 &3504615841345598394
 PrefabInstance:
   m_ObjectHideFlags: 0

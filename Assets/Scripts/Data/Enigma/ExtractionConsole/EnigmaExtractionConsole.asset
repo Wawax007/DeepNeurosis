@@ -18,7 +18,7 @@ MonoBehaviour:
     clueToPlace: {fileID: 11400000, guid: 020e218fddcf5c943800213fbd10c88d, type: 2}
   - floorIndex: -1
     clueToPlace: {fileID: 11400000, guid: 7d828c3a0ba997141a6adc904d3e97d7, type: 2}
-  - floorIndex: -1
+  - floorIndex: 0
     clueToPlace: {fileID: 11400000, guid: 4e456a5e82d0c574081d5069cc4b9958, type: 2}
   - floorIndex: -1
     clueToPlace: {fileID: 11400000, guid: 3c9bd623dd39c674cba5924a8ea6a1ca, type: 2}

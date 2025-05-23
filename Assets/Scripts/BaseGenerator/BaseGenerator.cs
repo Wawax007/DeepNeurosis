@@ -40,7 +40,7 @@ public class BaseGenerator : MonoBehaviour
     {
         this.floorIndex = floorIndex;
 
-        if (floorIndex == -2)
+        if (floorIndex == -2 || floorIndex == 2)
         {
             Debug.LogWarning("[BaseGenerator] StartRoom should not be procedurally generated.");
             IsFloorReady = true; // Évite un blocage d'attente
@@ -189,7 +189,6 @@ public class BaseGenerator : MonoBehaviour
                 }
 
 
-                // important si d'autres scripts veulent vérifier ça :
                 var validatedField = typeof(ExtractionConsoleLogic)
                     .GetField("isValidated", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (validatedField != null)
@@ -197,8 +196,6 @@ public class BaseGenerator : MonoBehaviour
             }
 
         }
-
-
         IsFloorReady = true;
     }
 

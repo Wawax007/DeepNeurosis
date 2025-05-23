@@ -115,8 +115,13 @@ public class ExtractionConsoleLogic : MonoBehaviour
 
         if (isCorrect)
         {
+            var capsuleActivator = GameObject.FindObjectOfType<ExtractionPodActivator>();
+            if (capsuleActivator != null)
+            {
+                capsuleActivator.EnableCapsule();
+            }
             isValidated = true;
-            
+
             Debug.Log("Séquence correcte. Extraction débloquée.");
             PlaySound(successSound);
             onSuccess?.Invoke();

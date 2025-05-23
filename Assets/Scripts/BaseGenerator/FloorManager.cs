@@ -12,6 +12,7 @@ public class FloorManager : MonoBehaviour
     public int currentFloor = -2;       
     public string saveFolderName = "FloorsData";
     private GameObject startRoomObj;
+    [SerializeField] private GameObject extractionPodObj;
     
     private void Start()
     {
@@ -42,6 +43,30 @@ public class FloorManager : MonoBehaviour
             StartCoroutine(WaitForFloorReady());
             return;
         }
+        
+        // FLOOR 2 → ExtractionPod
+        if (currentFloor == 2)
+        {
+            baseGenerator.ClearOldData();
+            baseGenerator.IsFloorReady = true;
+
+            SetExtractionPodActive(true);
+
+            if (HasAnyConsoleBeenValidated())
+            {
+                var activator = extractionPodObj.GetComponentInChildren<ExtractionPodActivator>();
+                if (activator != null)
+                {
+                    activator.ApplyInteractionLayerIfConsoleValidated(true);
+                    activator.PlayExtractionMusic();
+                }
+            }
+
+            Debug.Log("[FloorManager] ExtractionPod activé.");
+            StartCoroutine(WaitForFloorReady());
+            return;
+        }
+
 
 
         // AUTRES ÉTAGES
@@ -67,6 +92,29 @@ public class FloorManager : MonoBehaviour
         StartCoroutine(WaitForFloorReady());
     }
 
+    
+    private bool HasAnyConsoleBeenValidated()
+    {
+        string[] saveFiles = Directory.GetFiles(
+            Path.Combine(Application.persistentDataPath, saveFolderName),
+            "floor_*.json"
+        );
+
+        foreach (var path in saveFiles)
+        {
+            string json = File.ReadAllText(path);
+            FloorSaveData data = JsonUtility.FromJson<FloorSaveData>(json);
+
+            if (data.consoleState != null && data.consoleState.consoleValidated)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
 
 
     private void SaveAndUnloadCurrentFloor()
@@ -74,6 +122,12 @@ public class FloorManager : MonoBehaviour
         if (currentFloor == -2)
         {
             SetStartRoomActive(false); 
+            return;
+        }
+        
+        if (currentFloor == 2)
+        {
+            SetExtractionPodActive(false); 
             return;
         }
 
@@ -109,6 +163,25 @@ public class FloorManager : MonoBehaviour
             rb.detectCollisions = active;
         }
     }
+    
+    private void SetExtractionPodActive(bool active)
+    {
+        if (extractionPodObj == null) return;
+
+        extractionPodObj.SetActive(active);
+
+        Rigidbody[] rigidbodies = extractionPodObj.GetComponentsInChildren<Rigidbody>();
+        foreach (var rb in rigidbodies)
+        {
+            if (ElevatorPropTracker.Instance != null && ElevatorPropTracker.Instance.IsInElevator(rb.gameObject))
+            {
+                continue;
+            }
+
+            rb.isKinematic = !active;
+            rb.detectCollisions = active;
+        }
+    }
 
     
     private void SaveFloorToJson(int floorIndex)
@@ -116,6 +189,11 @@ public class FloorManager : MonoBehaviour
         if (floorIndex == -2)
         {
             Debug.Log("[FloorManager] StartRoom does not need to be saved.");
+            return;
+        }
+        if (floorIndex == 2)
+        {
+            Debug.Log("[FloorManager] ExtractionRoom does not need to be saved.");
             return;
         }
         // Récupère les données du baseGenerator

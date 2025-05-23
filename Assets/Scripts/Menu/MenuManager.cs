@@ -31,13 +31,13 @@ public class MenuManager : MonoBehaviour
 
     public void OnStartNewGame()
     {
-        candleAnimation.SetTrigger("start");
-        if(!PlayerPrefs.HasKey("volume"))
-        {
-            PlayerPrefs.SetFloat("volume", 1);
-            PlayerPrefs.Save();
-        }
-        float test = PlayerPrefs.GetFloat("volume");
+        // candleAnimation.SetTrigger("start");
+        // if(!PlayerPrefs.HasKey("volume"))
+        // {
+        //     PlayerPrefs.SetFloat("volume", 1);
+        //     PlayerPrefs.Save();
+        // }
+        // float test = PlayerPrefs.GetFloat("volume");
 
         StartCoroutine(StartGame());
     }

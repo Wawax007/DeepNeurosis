@@ -12,7 +12,7 @@
         public GameObject[] environmentProps;
 
         [Header("Tags d’ancre autorisés pour props environnementaux")]
-        public string[] environmentAnchorTags = { "EnvAnchor", "TableAnchor", "ShelfAnchor" };
+        public string[] environmentAnchorTags = { "EnvAnchor", "FloorAnchor", "ShelfAnchor" };
 
         [Header("Rayon de validation des anchors")]
         public float checkRadius = 1f;
@@ -20,6 +20,8 @@
         private List<Transform> floorAnchors = new List<Transform>();
 
         public static List<SavedClueProp> tempPlacedClues = new();
+
+        private HashSet<Transform> usedEnvAnchors = new();
 
         public void PlaceClueProps()
         {
@@ -29,18 +31,18 @@
                 return;
             }
 
-            
+            PlaceEnvironmentProps();
+
             FindAnchors();
 
             PlaceEnigmaClue();
-            PlaceEnvironmentProps();
         }
 
         private void FindAnchors()
         {
             floorAnchors.Clear();
             foreach (Transform t in GetComponentsInChildren<Transform>(true))
-                if (t.name == "FloorAnchor") floorAnchors.Add(t);
+                if (t.name == "ClueAnchor") floorAnchors.Add(t);
         }
 
         private void PlaceEnigmaClue()
@@ -58,7 +60,8 @@
             {
                 { "ConsoleAnchor", new List<Transform>() },
                 { "PosterAnchor", new List<Transform>() },
-                { "FloorAnchor", new List<Transform>() }
+                { "FloorAnchor", new List<Transform>() },
+                { "ClueAnchor", new List<Transform>() }
             };
 
             foreach (Transform t in GetComponentsInChildren<Transform>(true))
@@ -79,7 +82,7 @@
                 {
                     CluePropType.Console => "ConsoleAnchor",
                     CluePropType.Poster  => "PosterAnchor",
-                    _                    => "FloorAnchor"
+                    _                    => "ClueAnchor"
                 };
 
                 var availableAnchors = anchorsByTag[requiredTag];
@@ -158,14 +161,26 @@
 
         private void PlaceEnvironmentProps()
         {
+            usedEnvAnchors.Clear();
             List<Transform> envAnchors = FindEnvironmentAnchors();
             foreach (var prop in environmentProps)
             {
                 if (envAnchors.Count == 0) break;
-                int index = Random.Range(0, envAnchors.Count);
-                Transform anchor = envAnchors[index];
-                envAnchors.RemoveAt(index);
-                Instantiate(prop, anchor.position, anchor.rotation, transform);
+                Transform anchor = envAnchors.FirstOrDefault(a => !usedEnvAnchors.Contains(a));
+                if (anchor == null) break;
+
+                usedEnvAnchors.Add(anchor);
+                envAnchors.Remove(anchor);
+
+                
+                var instance = Instantiate(prop, anchor.position, anchor.rotation, transform);
+
+                if (instance.name.Contains("MetalTable"))
+                {
+                    instance.transform.position += new Vector3(0f, 1.2f, 0f);
+                    instance.transform.rotation *= Quaternion.Euler(-90f, 0f, 0f);
+                }
+
             }
         }
 

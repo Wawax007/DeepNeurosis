@@ -16,6 +16,7 @@ TagManager:
   - FloorAnchor
   - ClueProp
   - ClueProps
+  - ClueAnchor
   layers:
   - Default
   - TransparentFX

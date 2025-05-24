@@ -24,7 +24,7 @@ public class BreakableGlass : MonoBehaviour
 
     private void BreakGlass(Vector3 impactPoint, Vector3 impactDirection)
     {
-        Transform parentTransform = GameObject.Find("startRoom")?.transform;
+        Transform parentTransform = GameObject.Find("StartRoom")?.transform;
 
         if (brokenGlassPrefab)
         {

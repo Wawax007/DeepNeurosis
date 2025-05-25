@@ -22,6 +22,7 @@
         public static List<SavedClueProp> tempPlacedClues = new();
 
         private HashSet<Transform> usedEnvAnchors = new();
+        public int numberOfEnvironmentProps = 6;
 
         public void PlaceClueProps()
         {
@@ -163,25 +164,27 @@
         {
             usedEnvAnchors.Clear();
             List<Transform> envAnchors = FindEnvironmentAnchors();
-            foreach (var prop in environmentProps)
+            for (int i = 0; i < numberOfEnvironmentProps; i++)
             {
                 if (envAnchors.Count == 0) break;
+
                 Transform anchor = envAnchors.FirstOrDefault(a => !usedEnvAnchors.Contains(a));
                 if (anchor == null) break;
 
                 usedEnvAnchors.Add(anchor);
                 envAnchors.Remove(anchor);
 
-                
-                var instance = Instantiate(prop, anchor.position, anchor.rotation, transform);
+                GameObject prefab = environmentProps[Random.Range(0, environmentProps.Length)];
+
+                var instance = Instantiate(prefab, anchor.position, anchor.rotation, transform);
 
                 if (instance.name.Contains("MetalTable"))
                 {
                     instance.transform.position += new Vector3(0f, 1.2f, 0f);
                     instance.transform.rotation *= Quaternion.Euler(-90f, 0f, 0f);
                 }
-
             }
+
         }
 
         private List<Transform> FindEnvironmentAnchors()

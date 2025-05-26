@@ -420,6 +420,36 @@ public class InternalPartitionGenerator : MonoBehaviour
         }
         return dict;
     }
+    
+    public List<Vector3> GetAllPatrolPoints()
+    {
+        List<Vector3> points = new();
+
+        foreach (var kvp in roomCells)
+        {
+            List<Vector2Int> cells = kvp.Value;
+            if (cells.Count == 0) continue;
+
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var cell in cells)
+            {
+                Vector3 worldPos = CellToWorld(cell.y, cell.x); // col = x, row = z
+                minX = Mathf.Min(minX, worldPos.x);
+                maxX = Mathf.Max(maxX, worldPos.x);
+                minZ = Mathf.Min(minZ, worldPos.z);
+                maxZ = Mathf.Max(maxZ, worldPos.z);
+            }
+
+            float centerX = (minX + maxX) / 2f;
+            float centerZ = (minZ + maxZ) / 2f;
+            points.Add(new Vector3(centerX, 0f, centerZ));
+        }
+
+        return points;
+    }
+
 
     private GameObject InstantiateRandomNoDoorWall(Vector3 position, Quaternion rotation)
     {
@@ -479,9 +509,14 @@ public class InternalPartitionGenerator : MonoBehaviour
                         0f,
                         (-roomDimensions.z * 0.5f) + r * cellHeight + cellHeight * 0.5f);
                     Gizmos.DrawCube(center, new Vector3(cellWidth, 0.01f, cellHeight));
+                    Gizmos.color = Color.black;
+                    foreach (var centers in GetAllPatrolPoints())
+                    {
+                        Gizmos.DrawSphere(centers + Vector3.up * 0.2f, 1.2f);
+                    }
                 }
             }
-        }
+        }   
 
         // Grille
         if (gridRows > 0 && gridColumns > 0)

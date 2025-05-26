@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine; 
 using UnityEngine.AI;
 using System.Collections.Generic;
@@ -56,6 +57,15 @@ public class MobAI : MonoBehaviour
     public float suspicionTime = 2f;
     private float suspiciousTimer = 0f;
 
+    
+    private float doorInteractionDistance = 2.5f;
+    private float doorRetryCooldown = 2f;
+    private float lastDoorInteractTime = -999f;
+    private Transform lastInteractedDoor = null;
+    private Vector3? currentBlockedTarget = null;
+    private Transform doorTarget = null;
+    private bool waitingForDoor = false;
+    
     public MobState currentState = MobState.Patrolling;
 
     void Start()
@@ -63,6 +73,31 @@ public class MobAI : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
         agent.speed = patrolSpeed;
+
+        InternalPartitionGenerator[] allPartGens = FindObjectsOfType<InternalPartitionGenerator>();
+        List<Vector3> allPatrolPoints = new List<Vector3>();
+
+        foreach (var partGen in allPartGens)
+        {
+            allPatrolPoints.AddRange(partGen.GetAllPatrolPoints());
+        }
+
+        if (allPatrolPoints.Count == 0)
+        {
+            Debug.LogWarning("Aucun point de patrouille trouvé.");
+        }
+        else
+        {
+            patrolPoints = new Transform[allPatrolPoints.Count];
+            for (int i = 0; i < allPatrolPoints.Count; i++)
+            {
+                GameObject temp = new GameObject($"PatrolPoint_{i}");
+                temp.transform.position = allPatrolPoints[i];
+                patrolPoints[i] = temp.transform;
+            }
+        }
+
+
         GoToNextPatrolPoint();
     }
 
@@ -138,11 +173,123 @@ public class MobAI : MonoBehaviour
     private void GoToNextPatrolPoint()
     {
         if (patrolPoints.Length == 0) return;
-        agent.destination = patrolPoints[currentPatrolIndex].position;
+    
+        Vector3 targetPos = patrolPoints[currentPatrolIndex].position;
+
+        NavMeshPath path = new NavMeshPath();
+        agent.CalculatePath(targetPos, path);
+
+        if (path.status != NavMeshPathStatus.PathComplete)
+        {
+            Debug.Log("🔒 Aucun chemin valide vers le point. Recherche de porte intermédiaire...");
+            TryMoveTowardsClosestBlockingDoor(targetPos);
+            return;
+        }
+
+        agent.destination = targetPos;
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
         Debug.Log("Patrouille vers le point: " + currentPatrolIndex);
     }
 
+
+
+
+    private void TryMoveTowardsClosestBlockingDoor(Vector3 patrolTarget)
+    {
+        currentBlockedTarget = patrolTarget; // On sauvegarde notre objectif initial
+        float searchRadius = 50f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, searchRadius);
+
+        Transform bestDoor = null;
+        float bestDist = Mathf.Infinity;
+
+        foreach (var hit in hits)
+        {
+            if (!hit.CompareTag("Door")) continue;
+            DoorInteract interact = hit.GetComponent<DoorInteract>();
+            if (interact == null) continue;
+
+            float dist = Vector3.Distance(transform.position, hit.transform.position);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                bestDoor = hit.transform;
+            }
+        }
+
+        if (bestDoor != null)
+        {
+            doorTarget = bestDoor;
+            Debug.Log($"🚪 Mob se dirige vers la porte : {bestDoor.name}");
+            agent.SetDestination(bestDoor.position);
+            StartCoroutine(CheckDoorDistanceAndOpen());
+        }
+        else
+        {
+            Debug.LogWarning("Aucune porte trouvée autour du mob");
+            currentBlockedTarget = null;
+        }
+    }
+    
+    private IEnumerator CheckDoorDistanceAndOpen()
+    {
+        waitingForDoor = true;
+
+        while (doorTarget != null && Vector3.Distance(transform.position, doorTarget.position) > doorInteractionDistance)
+            yield return null;
+
+        if (doorTarget != null)
+        {
+            DoorInteract interact = doorTarget.GetComponent<DoorInteract>();
+            NavMeshObstacle navObstacle = doorTarget.GetComponent<NavMeshObstacle>();
+            bool doorWasOpenedByMob = false;
+
+            if (interact != null)
+            {
+                if (!interact.IsOpen)
+                {
+                    Debug.Log("Mob détecte une porte fermée → ouverture nécessaire");
+                    interact.Interact();
+                    doorWasOpenedByMob = true;
+                }
+                else
+                {
+                    Debug.Log("Porte déjà ouverte → aucune interaction");
+                }
+            }
+
+            if (doorWasOpenedByMob && navObstacle != null)
+            {
+                navObstacle.carving = false;
+                Debug.Log("carving temporairement désactivé");
+
+                yield return new WaitForSeconds(1.5f);
+
+                navObstacle.carving = true;
+                Debug.Log("carving réactivé");
+            }
+        }
+
+        waitingForDoor = false;
+
+        if (currentBlockedTarget.HasValue)
+        {
+            Debug.Log("Le mob reprend la patrouille vers l'objectif initial");
+            agent.SetDestination(currentBlockedTarget.Value);
+            currentBlockedTarget = null;
+        }
+
+        doorTarget = null;
+    }
+
+
+    private IEnumerator ResumePatrolAfterDoorOpened(float delay)
+    {
+        yield return new WaitForSeconds(delay); 
+        GoToNextPatrolPoint();
+    }
+
+    
     private void BeSuspicious()
     {
         agent.isStopped = true;

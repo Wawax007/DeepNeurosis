@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7728273904244112434}
   - component: {fileID: 8384936997829756389}
   - component: {fileID: 6504537870489215085}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Roof
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -114,7 +114,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6046177611552677436}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: FloorAnchor
   m_TagString: FloorAnchor
   m_Icon: {fileID: 0}
@@ -145,7 +145,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 612510009602856546}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: FloorAnchor
   m_TagString: FloorAnchor
   m_Icon: {fileID: 0}
@@ -176,7 +176,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1025470564812702209}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Emplacement_E
   m_TagString: EastWall
   m_Icon: {fileID: 0}
@@ -207,7 +207,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3608377419871621657}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Emplacement_S
   m_TagString: SouthWall
   m_Icon: {fileID: 0}
@@ -241,7 +241,7 @@ GameObject:
   - component: {fileID: 1594271955156384598}
   - component: {fileID: 8335749593274037954}
   - component: {fileID: 5345094928186620316}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -343,7 +343,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3205226281352528813}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: FloorAnchor
   m_TagString: FloorAnchor
   m_Icon: {fileID: 0}
@@ -377,7 +377,7 @@ GameObject:
   - component: {fileID: 3103151667787125879}
   - component: {fileID: 6345735637194172154}
   - component: {fileID: 1521881373580081189}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Room
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -473,6 +473,7 @@ MonoBehaviour:
   - FloorAnchor
   - PosterAnchor
   checkRadius: 1
+  numberOfEnvironmentProps: 6
 --- !u!1 &8735202910356735094
 GameObject:
   m_ObjectHideFlags: 0
@@ -482,7 +483,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6055176879082558621}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: FloorAnchor
   m_TagString: FloorAnchor
   m_Icon: {fileID: 0}
@@ -513,7 +514,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4458817994610586171}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Emplacement_N
   m_TagString: NorthWall
   m_Icon: {fileID: 0}
@@ -544,7 +545,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 733841484834632806}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Emplacement_W
   m_TagString: WestWall
   m_Icon: {fileID: 0}

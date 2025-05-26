@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -27,6 +28,7 @@ public class RoomGenerator : MonoBehaviour
     {
         Debug.Log($"Démarrage de la salle {this.name}. Initialisation des emplacements...");
         StartCoroutine(InitializeRoom());
+        // GetComponent<NavMeshSurface>()?.BuildNavMesh();
     }
 
     IEnumerator InitializeRoom()

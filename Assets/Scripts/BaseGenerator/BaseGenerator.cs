@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using ExtractionConsole.Module;
+using Unity.AI.Navigation;
 using UnityEngine;
 
 /// <summary>
@@ -29,6 +30,11 @@ public class BaseGenerator : MonoBehaviour
     private int floorIndex;
     public int GetFloorIndex() => floorIndex;
 
+    [Header("Mob Settings")]
+    public GameObject mobPrefab;
+    public Vector3 mobOffset = new Vector3(0f, 0f, 0f);
+    private GameObject spawnedMob;
+    public NavMeshSurface navMeshSurface;
     
     public bool IsFloorReady { get; set; }
 
@@ -86,6 +92,8 @@ public class BaseGenerator : MonoBehaviour
 
         AdjustRoomWalls();
         CheckDoorErrors();
+        
+        
 
         foreach (var clue in floorData.placedClueProps)
         {
@@ -321,6 +329,33 @@ public class BaseGenerator : MonoBehaviour
         // 3. Fin de génération – ajuste tout
         AdjustRoomWalls();
         CheckDoorErrors();
+        
+        if (navMeshSurface != null)
+        {
+            Debug.Log("[BaseGenerator] Bake du NavMesh à la fin de la génération…");
+            navMeshSurface.BuildNavMesh();
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.1f);
+
+        if (floorIndex == 0 && mobPrefab != null)
+        {
+            if (roomPositions.TryGetValue(Vector2.zero, out RoomData roomData))
+            {
+                var partGen = roomData.roomObject.GetComponent<InternalPartitionGenerator>();
+                if (partGen != null)
+                {
+                    Vector3 mobSpawnPos = partGen.GetCenterOfLargestSubRoom() + mobOffset;
+                    spawnedMob = Instantiate(mobPrefab, mobSpawnPos, Quaternion.identity);
+
+                    var mobAI = spawnedMob.GetComponent<MobAI>();
+                    if (mobAI != null)
+                        mobAI.player = GameObject.FindGameObjectWithTag("Player")?.transform;
+                }
+            }
+        }
+
         
         IsFloorReady = true;
         yield break;

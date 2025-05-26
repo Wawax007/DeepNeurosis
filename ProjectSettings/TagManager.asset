@@ -17,6 +17,7 @@ TagManager:
   - ClueProp
   - ClueProps
   - ClueAnchor
+  - Door
   layers:
   - Default
   - TransparentFX

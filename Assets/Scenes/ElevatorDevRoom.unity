@@ -6353,7 +6353,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5139361500403791198, guid: 45f8145a3632cd4459d5983a78d1b10a, type: 3}
       propertyPath: m_Name
-      value: model
+      value: Extinguisher
       objectReference: {fileID: 0}
     - target: {fileID: 5483553257719771108, guid: 45f8145a3632cd4459d5983a78d1b10a, type: 3}
       propertyPath: m_LocalPosition.x

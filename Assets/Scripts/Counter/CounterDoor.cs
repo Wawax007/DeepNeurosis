@@ -22,6 +22,7 @@ public class CounterDoor : MonoBehaviour, IInteractable
     public Renderer diodeRenderer;
     public Material diodeOffMaterial;
     public Material diodeOnMaterial;
+    public bool IsFuseInserted() => fuseInserted;
 
     private void Start()
     {
@@ -41,6 +42,24 @@ public class CounterDoor : MonoBehaviour, IInteractable
         {
             DetectAndInsertFuse();
         }
+    }
+    
+    public void ForceInsertFuse()
+    {
+        fuseInserted = true;
+        isOpen = true;
+
+        if (diodeRenderer != null && diodeOnMaterial != null)
+            diodeRenderer.material = diodeOnMaterial;
+
+        FusibleItem fusible = FindObjectOfType<FusibleItem>();
+        if (fusible != null && !fusible.IsAnchored)
+        {
+            fusible.AnchorTo(fuseSocket);
+        }
+
+        StopAllCoroutines();
+        StartCoroutine(RotateDoor());
     }
 
 

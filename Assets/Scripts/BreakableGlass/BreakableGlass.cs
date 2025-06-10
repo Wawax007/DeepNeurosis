@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class BreakableGlass : MonoBehaviour
@@ -42,27 +44,36 @@ public class BreakableGlass : MonoBehaviour
 
                 Vector3 toFragment = rb.transform.position - impactPoint;
                 float distance = toFragment.magnitude;
-
-                // Courbe d’atténuation rapide avec la distance (plus > exponentielle)
-                float forceMultiplier = Mathf.Clamp01(1f - distance / 0.5f); // 0.5m rayon efficace
-                forceMultiplier = Mathf.Pow(forceMultiplier, 2f); // accentue la décroissance
-
-                // Force avec variation
-                float force = Mathf.Lerp(2f, 6f, forceMultiplier); // morceaux proches = +6
-
-                // Direction principale + légère variation
+                float forceMultiplier = Mathf.Clamp01(1f - distance / 0.5f);
+                forceMultiplier = Mathf.Pow(forceMultiplier, 2f);
+                float force = Mathf.Lerp(2f, 6f, forceMultiplier);
                 Vector3 dir = (impactDirection + Random.insideUnitSphere * 0.05f).normalized;
 
                 rb.AddForce(dir * force, ForceMode.Impulse);
             }
+
+            StartCoroutine(SaveFragmentsAfterPhysics(broken));
         }
 
         if (breakSound)
-        {
             AudioSource.PlayClipAtPoint(breakSound, transform.position);
-        }
 
         Destroy(gameObject);
+    }
+
+    private IEnumerator SaveFragmentsAfterPhysics(GameObject broken)
+    {
+        yield return new WaitForFixedUpdate(); // attend que les fragments soient tombés
+
+        List<SavedGlassFragment> fragments = new List<SavedGlassFragment>();
+        foreach (Transform child in broken.transform)
+        {
+            fragments.Add(new SavedGlassFragment
+            {
+                position = child.position,
+                rotation = child.rotation
+            });
+        }
     }
 
 }

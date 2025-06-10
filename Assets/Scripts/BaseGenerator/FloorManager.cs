@@ -21,7 +21,19 @@ public class FloorManager : MonoBehaviour
             Directory.CreateDirectory(dirPath);
 
         startRoomObj = GameObject.Find("StartRoom");
+        if (currentFloor == -2)
+        {
+            StartCoroutine(DeferredLoadStartRoom());
+        }
+
     }
+    
+    private IEnumerator DeferredLoadStartRoom()
+    {
+        yield return null;
+        LoadStartRoom();
+    }
+
 
     /// <summary>
     /// Appelé quand le joueur choisit un étage sur l'ascenseur.
@@ -38,6 +50,7 @@ public class FloorManager : MonoBehaviour
             baseGenerator.IsFloorReady = true;
 
             SetStartRoomActive(true); 
+            LoadStartRoom();
 
             Debug.Log("[FloorManager] StartRoom already in scene. No generation or loading required.");
             StartCoroutine(WaitForFloorReady());
@@ -91,6 +104,116 @@ public class FloorManager : MonoBehaviour
 
         StartCoroutine(WaitForFloorReady());
     }
+    
+    private string GetStartRoomSavePath()
+    {
+        return Path.Combine(Application.persistentDataPath, saveFolderName, "startRoom.json");
+    }
+
+    private void SaveStartRoom()
+    {
+        GameObject extinguisher = GameObject.Find("Extinguisher");
+        CounterDoor counter = GameObject.FindObjectOfType<CounterDoor>();
+        BreakableGlass glass = GameObject.FindObjectOfType<BreakableGlass>();
+
+        if (extinguisher == null || counter == null) return;
+
+        List<SavedGlassFragment> fragments = new List<SavedGlassFragment>();
+        Transform glassParent = GameObject.Find("StartRoom")?.transform;
+
+        if (glassParent != null)
+        {
+            foreach (Transform child in glassParent)
+            {
+                if (child.name.Contains("breakedGlass"))
+                {
+                    foreach (Transform frag in child)
+                    {
+                        fragments.Add(new SavedGlassFragment
+                        {
+                            position = frag.position,
+                            rotation = frag.rotation
+                        });
+                    }
+                }
+            }
+        }
+
+        StartRoomSaveData data = new StartRoomSaveData
+        {
+            extinguisherPosition = extinguisher.transform.position,
+            extinguisherRotation = extinguisher.transform.rotation,
+            counterFuseInserted = counter.IsFuseInserted(),
+            glassBroken = (glass == null),
+            glassFragments = fragments
+        };
+
+        string json = JsonUtility.ToJson(data, true);
+        File.WriteAllText(GetStartRoomSavePath(), json);
+
+        Debug.Log("[FloorManager] StartRoom saved with " + fragments.Count + " glass fragments.");
+    }
+
+
+    private void LoadStartRoom()
+    {
+        string path = GetStartRoomSavePath();
+        if (!File.Exists(path)) return;
+
+        string json = File.ReadAllText(path);
+        StartRoomSaveData data = JsonUtility.FromJson<StartRoomSaveData>(json);
+
+        GameObject extinguisher = GameObject.Find("Extinguisher");
+        if (extinguisher != null)
+            extinguisher.transform.position = data.extinguisherPosition;
+            extinguisher.transform.rotation = data.extinguisherRotation;
+        CounterDoor counter = GameObject.FindObjectOfType<CounterDoor>();
+        if (counter != null && data.counterFuseInserted)
+            counter.ForceInsertFuse();
+
+        if (data.glassBroken && data.glassFragments != null && data.glassFragments.Count > 0)
+        {
+            BreakableGlass glass = GameObject.FindObjectOfType<BreakableGlass>();
+            if (glass != null)
+            {
+                Transform parent = GameObject.Find("StartRoom")?.transform;
+
+                foreach (Transform child in parent)
+                {
+                    if (child.name.Contains("BrokenGlass"))
+                        Destroy(child.gameObject);
+                }
+
+                GameObject broken = Instantiate(
+                    glass.brokenGlassPrefab,
+                    glass.transform.position,
+                    Quaternion.Euler(0, 90, 0),
+                    parent
+                );
+
+                Transform[] children = broken.GetComponentsInChildren<Transform>();
+                int fragmentCount = Mathf.Min(children.Length, data.glassFragments.Count);
+
+                for (int i = 0; i < fragmentCount; i++)
+                {
+                    Transform frag = children[i];
+                    frag.position = data.glassFragments[i].position;
+                    frag.rotation = data.glassFragments[i].rotation;
+
+                    Rigidbody rb = frag.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.isKinematic = true; 
+                    }
+                }
+
+                glass.gameObject.SetActive(false);
+            }
+        }
+
+
+    }
+
 
     
     private bool HasAnyConsoleBeenValidated()
@@ -121,6 +244,7 @@ public class FloorManager : MonoBehaviour
     {
         if (currentFloor == -2)
         {
+            SaveStartRoom();
             SetStartRoomActive(false); 
             return;
         }
@@ -132,7 +256,6 @@ public class FloorManager : MonoBehaviour
         }
 
         SaveFloorToJson(currentFloor);
-        // Note: la destruction des salles générées est gérée par BaseGenerator lorsqu’on regénère.
     }
 
     private IEnumerator WaitForFloorReady()

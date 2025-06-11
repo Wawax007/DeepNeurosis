@@ -55,8 +55,15 @@ public class ExtractionConsoleLogic : MonoBehaviour
 
     public bool AreModulesInserted()
     {
-        return socketSecurity != null && socketSecurity.IsFilled &&
-               socketNavigation != null && socketNavigation.IsFilled;
+        bool areInserted = socketSecurity != null && socketSecurity.IsFilled &&
+                           socketNavigation != null && socketNavigation.IsFilled;
+
+        if (areInserted)
+        {
+            PlaySound(successSound);
+        }
+
+        return areInserted;
     }
 
     public void SetValue(RotarySelector.SelectorType type, string value)

@@ -204,6 +204,33 @@ public class BaseGenerator : MonoBehaviour
             }
 
         }
+        if (navMeshSurface != null)
+        {
+            Debug.Log("[BaseGenerator] Rebake du NavMesh après chargement de l'étage.");
+            navMeshSurface.BuildNavMesh();
+        }
+
+        if (floorIndex == 0 && floorData.hasMob && mobPrefab != null)
+        {
+            if (roomPositions.TryGetValue(Vector2.zero, out RoomData roomData))
+            {
+                var partGen = roomData.roomObject.GetComponent<InternalPartitionGenerator>();
+                if (partGen != null)
+                {
+                    Vector3 mobSpawnPos = new Vector3(
+                        partGen.GetCenterOfLargestSubRoom().x,
+                        roomData.roomObject.transform.position.y,
+                        partGen.GetCenterOfLargestSubRoom().z
+                    ) + mobOffset;
+                    spawnedMob = Instantiate(mobPrefab, mobSpawnPos, Quaternion.identity);
+
+                    var mobAI = spawnedMob.GetComponent<MobAI>();
+                    if (mobAI != null)
+                        mobAI.player = GameObject.FindGameObjectWithTag("Player")?.transform;
+                }
+            }
+        }
+
         IsFloorReady = true;
     }
 
@@ -256,7 +283,8 @@ public class BaseGenerator : MonoBehaviour
                 clue.rotation = clue.instance.transform.rotation;
             }
         }
-
+        bool mobPresent = GameObject.FindWithTag("Mob") != null;
+        
         return new FloorSaveData
         {
             floorIndex = floorIndex,
@@ -267,7 +295,8 @@ public class BaseGenerator : MonoBehaviour
                     c.currentFloorIndex == floorIndex &&
                     !ElevatorPropTracker.Instance.IsInElevator(c.instance))
                 .ToList(),
-            consoleState = state
+            consoleState = state,
+            hasMob = mobPresent
         };
     }
 
@@ -565,6 +594,7 @@ public class FloorSaveData
     public List<RoomExportData> rooms;
     public List<SavedClueProp> placedClueProps = new();
     public SavedConsoleState consoleState;
+    public bool hasMob;
 }
 
 [System.Serializable]

@@ -386,11 +386,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 3dd6e5b1969e6e843a21bab72c1d3d77, type: 3}
       propertyPath: m_Name
-      value: Ch25_nonPBR
+      value: Monster
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 3dd6e5b1969e6e843a21bab72c1d3d77, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 3dd6e5b1969e6e843a21bab72c1d3d77, type: 3}
+      propertyPath: m_TagString
+      value: Mob
       objectReference: {fileID: 0}
     - target: {fileID: 1092408308860062549, guid: 3dd6e5b1969e6e843a21bab72c1d3d77, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -762,11 +766,16 @@ MonoBehaviour:
     m_Bits: 0
   eyeLevelOffset: {x: 0, y: 1.8, z: 0}
   chaseSpeed: 5
-  patrolSpeed: 2
   suspicionSpeed: 2
+  patrolSpeed: 2
   attackDelay: 2
   searchDuration: 10
   suspicionTime: 2
+  aggressiveDetectionBonus: 10
+  footstepClips:
+  - {fileID: 8300000, guid: 8619d15eaa4caa943a4542692a9dc7a0, type: 3}
+  footstepIntervalWalk: 0.56
+  footstepIntervalRun: 0.28
   currentState: 0
 --- !u!95 &3760025078970724584
 Animator:

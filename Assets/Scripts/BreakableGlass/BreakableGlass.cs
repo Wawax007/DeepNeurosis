@@ -12,15 +12,18 @@ public class BreakableGlass : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         Rigidbody rb = collision.rigidbody;
-        if (rb != null)
+        if (rb == null || rb.mass < 0.2f) return;
+
+        ContactPoint contact = collision.contacts[0];
+        float impactForce = Mathf.Abs(Vector3.Dot(collision.relativeVelocity, contact.normal) * rb.mass);
+
+        Debug.Log($"Impact force: {impactForce} (Break if ≥ {breakForce})");
+
+        if (impactForce >= breakForce)
         {
-            float impactForce = collision.relativeVelocity.magnitude * rb.mass;
-            if (impactForce >= breakForce)
-            {
-                Vector3 impactPoint = collision.contacts[0].point;
-                Vector3 impactDirection = collision.relativeVelocity.normalized;
-                BreakGlass(impactPoint, impactDirection);
-            }
+            Vector3 impactPoint = contact.point;
+            Vector3 impactDirection = collision.relativeVelocity.normalized;
+            BreakGlass(impactPoint, impactDirection);
         }
     }
 

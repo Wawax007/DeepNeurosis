@@ -19,7 +19,7 @@ namespace PlayerScripts
         public float mouseSensitivity = 1f;
         public float maxLookAngle = 90f;
 
-        private CharacterController characterController;
+        public CharacterController characterController;
         private InputActions inputActions;
         private Vector3 velocity;
         private float cameraPitch = 0f;

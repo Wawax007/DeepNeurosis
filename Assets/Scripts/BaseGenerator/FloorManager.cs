@@ -254,6 +254,12 @@ public class FloorManager : MonoBehaviour
             SetExtractionPodActive(false); 
             return;
         }
+        GameObject mob = GameObject.FindWithTag("Mob");
+        if (mob != null)
+        {
+            Destroy(mob);
+            Debug.Log("[FloorManager] Mob détruit lors du déchargement de l'étage.");
+        }
 
         SaveFloorToJson(currentFloor);
     }

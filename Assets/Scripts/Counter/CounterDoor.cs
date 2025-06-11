@@ -56,6 +56,7 @@ public class CounterDoor : MonoBehaviour, IInteractable
         if (fusible != null && !fusible.IsAnchored)
         {
             fusible.AnchorTo(fuseSocket);
+            fusible.transform.localScale = Vector3.one;
         }
 
         StopAllCoroutines();
@@ -76,6 +77,7 @@ public class CounterDoor : MonoBehaviour, IInteractable
             if (fusible != null && !fusible.IsAnchored)
             {
                 fusible.AnchorTo(fuseSocket);
+                fusible.transform.localScale = Vector3.one;
                 fuseInserted = true;
 
                 if (diodeRenderer != null && diodeOnMaterial != null)

@@ -2628,6 +2628,10 @@ PrefabInstance:
       propertyPath: m_LocalPosition.x
       value: -0.655
       objectReference: {fileID: 0}
+    - target: {fileID: 6014417524219966668, guid: cce505bcd6656c14bbb8139fd1fee79d, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6380530197985065164, guid: cce505bcd6656c14bbb8139fd1fee79d, type: 3}
       propertyPath: m_Name
       value: ElevatorV3
@@ -6939,6 +6943,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 597084602}
     m_Modifications:
+    - target: {fileID: 3827315118098329196, guid: 45f8145a3632cd4459d5983a78d1b10a, type: 3}
+      propertyPath: m_Mass
+      value: 30
+      objectReference: {fileID: 0}
     - target: {fileID: 5139361500403791198, guid: 45f8145a3632cd4459d5983a78d1b10a, type: 3}
       propertyPath: m_Name
       value: Extinguisher
@@ -7457,10 +7465,6 @@ PrefabInstance:
     - target: {fileID: 645089270387564519, guid: a6fde1e5beae7ac4c94b3976d859a037, type: 3}
       propertyPath: m_Name
       value: FusePrefab
-      objectReference: {fileID: 0}
-    - target: {fileID: 2231777958330543645, guid: a6fde1e5beae7ac4c94b3976d859a037, type: 3}
-      propertyPath: m_Mass
-      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 6841068369919900502, guid: a6fde1e5beae7ac4c94b3976d859a037, type: 3}
       propertyPath: m_LocalPosition.x

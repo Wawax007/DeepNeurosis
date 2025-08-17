@@ -2,10 +2,10 @@ name: ci
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, prepush]
     tags: ['v*.*.*']
   pull_request:
-    branches: [main, develop]
+    branches: [main, prepush]
   workflow_dispatch:
     inputs:
       run_tests:
@@ -90,4 +90,48 @@ jobs:
         with:
           name: TestResults
           path: TestResults/**
+          retention-days: 7
+
+  build_windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    needs: tests
+    timeout-minutes: 60
+    steps:
+      - name: Checkout (LFS ok si assets lourds)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ runner.os }}-${{ hashFiles('**/Packages/manifest.json') }}-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-${{ runner.os }}-
+
+      - name: Build Windows
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          unityVersion: 2022.3.37f1
+          targetPlatform: StandaloneWindows64
+          buildName: DeepNeurosis
+          outputPath: build
+
+      - name: Zip build
+        run: |
+          powershell Compress-Archive -Path build\* -DestinationPath DeepNeurosis_Windows.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeepNeurosis_Windows
+          path: DeepNeurosis_Windows.zip
           retention-days: 7

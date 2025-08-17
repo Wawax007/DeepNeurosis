@@ -92,7 +92,8 @@ public class FloorManager : MonoBehaviour
 
             SetExtractionPodActive(true);
 
-            if (HasAnyConsoleBeenValidated())
+            // Protéger contre extractionPodObj non assigné en scène/tests
+            if (extractionPodObj != null && HasAnyConsoleBeenValidated())
             {
                 var activator = extractionPodObj.GetComponentInChildren<ExtractionPodActivator>();
                 if (activator != null)
@@ -100,6 +101,10 @@ public class FloorManager : MonoBehaviour
                     activator.ApplyInteractionLayerIfConsoleValidated(true);
                     activator.PlayExtractionMusic();
                 }
+            }
+            else if (extractionPodObj == null)
+            {
+                Debug.LogWarning("[FloorManager] extractionPodObj non assigné; activation simple sans configuration d'ExtractionPodActivator.");
             }
 
             Debug.Log("[FloorManager] ExtractionPod activé.");

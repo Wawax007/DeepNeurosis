@@ -35,25 +35,26 @@ public class ElevatorController : MonoBehaviour
         if (doorBlocker != null)
             doorBlocker.SetActive(true);
 
-        if (doorAnimator != null)
+        // Ne déclenche l'anim que si un controller est présent
+        if (doorAnimator != null && doorAnimator.runtimeAnimatorController != null)
             doorAnimator.SetTrigger("Close");
 
-        if (doorCloseClip != null)
+        if (doorCloseClip != null && audioSource != null)
             audioSource.PlayOneShot(doorCloseClip);
 
         yield return new WaitForSeconds(doorCloseDelay);
 
-        if (moveClip != null)
+        if (moveClip != null && audioSource != null)
             audioSource.PlayOneShot(moveClip);
 
         floorManager.GoToFloor(floorIndex);
 
         yield return new WaitForSeconds(moveDuration);
 
-        if (dingClip != null)
+        if (dingClip != null && audioSource != null)
             audioSource.PlayOneShot(dingClip);
 
-        if (doorAnimator != null)
+        if (doorAnimator != null && doorAnimator.runtimeAnimatorController != null)
             doorAnimator.SetTrigger("Open");
 
         yield return new WaitForSeconds(doorOpenDuration); 

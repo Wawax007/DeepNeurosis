@@ -17,6 +17,7 @@ namespace PlayerScripts
 
         [Header("Camera Settings")] public Transform cameraTransform;
         public float mouseSensitivity = 1f;
+        [Range(0.01f, 2f)] public float sensitivityMultiplier = 0.2f;
         public float maxLookAngle = 90f;
 
         public CharacterController characterController;
@@ -86,9 +87,10 @@ namespace PlayerScripts
         private void HandleCameraRotation()
         {
             Vector2 lookInput = inputActions.Character.Look.ReadValue<Vector2>();
-            transform.Rotate(Vector3.up * lookInput.x * mouseSensitivity);
+            float sens = mouseSensitivity * sensitivityMultiplier;
+            transform.Rotate(Vector3.up * lookInput.x * sens);
 
-            cameraPitch -= lookInput.y * mouseSensitivity;
+            cameraPitch -= lookInput.y * sens;
             cameraPitch = Mathf.Clamp(cameraPitch, -maxLookAngle, maxLookAngle);
             cameraTransform.localRotation = Quaternion.Euler(cameraPitch, 0, 0);
         }

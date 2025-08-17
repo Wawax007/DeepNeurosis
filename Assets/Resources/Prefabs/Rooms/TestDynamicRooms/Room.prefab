@@ -120,7 +120,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6046177611552677436
 Transform:
   m_ObjectHideFlags: 0
@@ -151,7 +151,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &612510009602856546
 Transform:
   m_ObjectHideFlags: 0
@@ -349,7 +349,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3205226281352528813
 Transform:
   m_ObjectHideFlags: 0
@@ -465,9 +465,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6ea752d89a63045b6f56dbf793fb2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  floorIndex: 0
-  environmentProps:
-  - {fileID: 5267912979501992747, guid: 4522e083a02efbf4aba28d14a945559c, type: 3}
+  currentFloor: 0
+  clusterLibrary:
+  - {fileID: 11400000, guid: e4eca07d0215ea849bea2bb3ab0c324d, type: 2}
+  - {fileID: 11400000, guid: daf75450778e6e447a0634f62988b8f9, type: 2}
+  microProps:
+  - {fileID: 3312768223081012380, guid: 0619084745c70c245b2e995b304b55cc, type: 3}
+  - {fileID: 7100244309884240156, guid: 80697b2621503734a8195779e8efcab5, type: 3}
+  accentProps: []
   environmentAnchorTags:
   - ConsoleAnchor
   - FloorAnchor
@@ -489,7 +494,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6055176879082558621
 Transform:
   m_ObjectHideFlags: 0

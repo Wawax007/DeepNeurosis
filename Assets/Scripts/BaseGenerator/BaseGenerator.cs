@@ -56,6 +56,8 @@ public class BaseGenerator : MonoBehaviour
         {
             PropTransferManager.Instance.MarkPropsInElevatorForPreservation();
         }      
+        // Assure que la génération est active pour une génération procédurale
+        PropPlacer.SkipGeneration = false;
         ClearOldData();
         Debug.Log($"[BaseGenerator] Generating floor {floorIndex} …");
         StartCoroutine(GenerateMapCoroutine(floorIndex));
@@ -72,6 +74,8 @@ public class BaseGenerator : MonoBehaviour
         {
             PropTransferManager.Instance.MarkPropsInElevatorForPreservation();
         }
+        // Empêche la génération automatique de props par les RoomGenerator/PropPlacer
+        PropPlacer.SkipGeneration = true;
         ClearOldData();
         PropPlacer.tempPlacedClues.RemoveAll(c => c.currentFloorIndex == floorIndex);
 
@@ -93,6 +97,46 @@ public class BaseGenerator : MonoBehaviour
         AdjustRoomWalls();
         CheckDoorErrors();
         
+        // Construit une table nom→prefab depuis tous les PropPlacer présents dans les rooms chargées
+        var prefabByName = new Dictionary<string, GameObject>();
+        foreach (var kv in roomPositions)
+        {
+            var roomObj = kv.Value.roomObject;
+            foreach (var placer in roomObj.GetComponentsInChildren<PropPlacer>(true))
+            {
+                if (placer.microProps != null)
+                {
+                    foreach (var p in placer.microProps)
+                    {
+                        if (p == null) continue;
+                        var key = p.name;
+                        if (!prefabByName.ContainsKey(key)) prefabByName[key] = p;
+                    }
+                }
+                if (placer.accentProps != null)
+                {
+                    foreach (var p in placer.accentProps)
+                    {
+                        if (p == null) continue;
+                        var key = p.name;
+                        if (!prefabByName.ContainsKey(key)) prefabByName[key] = p;
+                    }
+                }
+                if (placer.clusterLibrary != null)
+                {
+                    foreach (var cluster in placer.clusterLibrary)
+                    {
+                        if (cluster == null || cluster.variants == null) continue;
+                        foreach (var v in cluster.variants)
+                        {
+                            if (v == null) continue;
+                            var key = v.name;
+                            if (!prefabByName.ContainsKey(key)) prefabByName[key] = v;
+                        }
+                    }
+                }
+            }
+        }
         
 
         foreach (var clue in floorData.placedClueProps)
@@ -160,6 +204,38 @@ public class BaseGenerator : MonoBehaviour
             };
             PropPlacer.tempPlacedClues.Add(saved);
 
+            // Ajoute un tracker sur l'instance restaurée pour synchroniser sa sauvegarde
+            var tracker = instance.GetComponent<CluePropInstance>();
+            if (tracker == null) tracker = instance.AddComponent<CluePropInstance>();
+            tracker.enigmaId = saved.enigmaId;
+            tracker.prefabName = saved.prefabName;
+            tracker.moduleType = saved.moduleType;
+            tracker.used = saved.used;
+            tracker.linkedSave = saved;
+        }
+
+        // Restaure les props générés par PropPlacer
+        if (floorData.generatedProps != null)
+        {
+            foreach (var gp in floorData.generatedProps)
+            {
+                if (string.IsNullOrEmpty(gp.prefabName)) continue;
+                GameObject prefab;
+                if (!prefabByName.TryGetValue(gp.prefabName, out prefab) || prefab == null)
+                {
+                    // Fallback: Resources/Prefabs/<name>
+                    prefab = Resources.Load<GameObject>("Prefabs/" + gp.prefabName);
+                }
+                if (prefab == null)
+                {
+                    Debug.LogWarning($"[BaseGenerator] Prefab généré introuvable: {gp.prefabName}. Skipping.");
+                    continue;
+                }
+                var inst = Instantiate(prefab, gp.position, gp.rotation, transform);
+                // Remettre le marqueur (facultatif)
+                var mark = inst.GetComponent<PropPlacedInstance>() ?? inst.AddComponent<PropPlacedInstance>();
+                mark.prefabName = gp.prefabName;
+            }
         }
 
         if (floorData.consoleState != null)
@@ -232,6 +308,8 @@ public class BaseGenerator : MonoBehaviour
         }
 
         IsFloorReady = true;
+        // Réactive la génération pour les futurs étages générés
+        PropPlacer.SkipGeneration = false;
     }
 
 
@@ -285,6 +363,23 @@ public class BaseGenerator : MonoBehaviour
         }
         bool mobPresent = GameObject.FindWithTag("Mob") != null;
         
+        // Sauvegarde des props générés par PropPlacer
+        var generated = new List<SavedPlacedProp>();
+        var trackers = transform.GetComponentsInChildren<PropPlacedInstance>(true);
+        foreach (var t in trackers)
+        {
+            if (t == null || t.gameObject == null) continue;
+            var go = t.gameObject;
+            if (ElevatorPropTracker.Instance != null && ElevatorPropTracker.Instance.IsInElevator(go))
+                continue; // ne pas sauver ceux dans l'ascenseur
+            generated.Add(new SavedPlacedProp
+            {
+                prefabName = t.prefabName,
+                position = go.transform.position,
+                rotation = go.transform.rotation
+            });
+        }
+        
         return new FloorSaveData
         {
             floorIndex = floorIndex,
@@ -296,7 +391,8 @@ public class BaseGenerator : MonoBehaviour
                     !ElevatorPropTracker.Instance.IsInElevator(c.instance))
                 .ToList(),
             consoleState = state,
-            hasMob = mobPresent
+            hasMob = mobPresent,
+            generatedProps = generated
         };
     }
 
@@ -479,7 +575,7 @@ public class BaseGenerator : MonoBehaviour
 
         foreach (var placer in roomObj.GetComponentsInChildren<PropPlacer>())
         {
-            placer.floorIndex = floorIndex;
+            placer.currentFloor = floorIndex;
         }
 
         return roomObj;
@@ -595,6 +691,7 @@ public class FloorSaveData
     public List<SavedClueProp> placedClueProps = new();
     public SavedConsoleState consoleState;
     public bool hasMob;
+    public List<SavedPlacedProp> generatedProps = new();
 }
 
 [System.Serializable]
@@ -649,7 +746,15 @@ public class SavedClueProp
     [System.NonSerialized] public GameObject instance;
 }
 
+[System.Serializable]
+public class SavedPlacedProp
+{
+    public string prefabName;
+    public Vector3 position;
+    public Quaternion rotation;
+}
 
 
 
 #endregion
+

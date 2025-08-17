@@ -1,0 +1,8 @@
+# NOTE: Documentation uniquement
+# Le workflow CI effectif se trouve dans .github/workflows/ci.yml
+# Il lance les tests Unity (EditMode et PlayMode) avec game-ci/unity-test-runner
+# pour Unity 2022.3.37f1 et téléverse les artefacts sous TestResults/.
+#
+# Prérequis: définir le secret GitHub Actions UNITY_LICENSE (contenu de licence Unity pour CI).
+# Détails complets: voir .github/workflows/ci.yml.
+

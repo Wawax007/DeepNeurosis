@@ -35,6 +35,8 @@
         public float chaseSpeed = 7.5f;
         public float suspicionSpeed = 4.5f;
         public float patrolSpeed = 2f;
+        private float chaseStartTime = -999f;
+        private const float chaseGrace = 0.4f;
 
         [Header("Attack Settings")]
         public float attackDelay = 0f;
@@ -75,15 +77,36 @@
         private AudioSource audioSource;
         
         public MobState currentState = MobState.Patrolling;
-
+        
+        [Header("Stuck Detection")]
+        private float stuckTimer = 0f;
+        
+        [Header("Hearing cache")]
+        private float lastHeardTime   = -999f;
+        private bool  currentlyHearing = false;
+        public  float hearingMemory   = 0.5f;
+        
         private float attackCooldown = 2f;
         private float lastAttackTime = -Mathf.Infinity;
+        private NavMeshPath reusablePath;
+        
+        [Header("Footstep spam guard")]
+        private float minFootstepGap = 0.15f;
+        private float lastFootstepRealTime = -999f;
+
+        
+        private bool wasRunning = false;
 
         void Start()
         {
-            agent = GetComponent<NavMeshAgent>();
-            animator = GetComponent<Animator>();
-            agent.speed = patrolSpeed;
+            reusablePath = new NavMeshPath();
+            agent        = GetComponent<NavMeshAgent>();
+            animator     = GetComponent<Animator>();
+
+            agent.acceleration     = 45f;  
+            agent.angularSpeed     = 720f;
+            agent.autoRepath       = true;  
+            agent.stoppingDistance = 0.3f;
 
             InternalPartitionGenerator[] allPartGens = FindObjectsOfType<InternalPartitionGenerator>();
             List<Vector3> allPatrolPoints = new List<Vector3>();
@@ -142,10 +165,16 @@
                     Patrol();
                     if (CanDetectPlayer())
                     {
-                        Debug.Log("Joueur détecté en patrouille, passage en Suspicious");
-                        currentState = MobState.Suspicious;
-                        suspiciousTimer = 0f;
-                        agent.speed = suspicionSpeed;
+                        Debug.Log("Joueur détecté en Suspicious, passage en Chasing");
+                        lastKnownPosition = player.position;
+                        currentState      = MobState.Chasing;
+                        chaseStartTime    = Time.time;
+                        agent.isStopped   = false;
+                        agent.ResetPath();
+                        agent.speed       = chaseSpeed;
+                        agent.autoBraking = false;
+                        agent.stoppingDistance = 0.3f;
+                        SetPathToPlayerOrDoor();
                         return;
                     }
                     break;
@@ -155,8 +184,14 @@
                     {
                         Debug.Log("Joueur détecté en Suspicious, passage en Chasing");
                         lastKnownPosition = player.position;
-                        currentState = MobState.Chasing;
-                        agent.speed = chaseSpeed;
+                        currentState      = MobState.Chasing;
+                        chaseStartTime    = Time.time;
+                        agent.isStopped   = false;
+                        agent.ResetPath();
+                        agent.speed       = chaseSpeed;
+                        agent.autoBraking = false;
+                        agent.stoppingDistance = 0.3f;
+                        SetPathToPlayerOrDoor();
                         return;
                     }
                     BeSuspicious();
@@ -172,6 +207,7 @@
                         Debug.Log("Joueur détecté en Searching, passage en Chasing");
                         lastKnownPosition = player.position;
                         currentState = MobState.Chasing;
+                        chaseStartTime         = Time.time;
                         agent.speed = chaseSpeed;
                         return; 
                     }
@@ -189,42 +225,62 @@
         
         private void HandleFootsteps()
         {
-            
-            if (agent == null || audioSource == null || footstepClips.Length == 0) return;
-            if (currentState == MobState.Attacking) return;
-            
-            if (!agent.isStopped && agent.velocity.magnitude > 0.1f)
+            if (agent == null || audioSource == null) return;
+            if (currentState == MobState.Attacking)   return;
+
+            bool isMoving  = !agent.isStopped && agent.velocity.magnitude > 0.1f;
+            bool isRunning = agent.speed >= chaseSpeed - 0.1f;
+
+            if (!isMoving)
             {
-                footstepTimer -= Time.deltaTime;
-                float interval = (agent.speed >= chaseSpeed - 0.1f) ? footstepIntervalRun : footstepIntervalWalk;
-
-                if (footstepTimer <= 0f)
-                {
-                    footstepTimer = interval;
-                    PlayRandomFootstep();
-                }
+                footstepTimer = 0f;
+                return;
             }
+
+            if (isRunning != wasRunning)
+                footstepTimer = 0f;
+
+            footstepTimer -= Time.deltaTime;
+            float interval = isRunning ? footstepIntervalRun : footstepIntervalWalk;
+            if (footstepTimer <= 0f)
+            {
+                footstepTimer = interval;
+                PlayRandomFootstep(isRunning);
+            }
+
+            wasRunning = isRunning;
         }
 
-        private void PlayRandomFootstep()
+
+        private void PlayRandomFootstep(bool running)
         {
-            int index = Random.Range(0, footstepClips.Length);
+            if (Time.time - lastFootstepRealTime < minFootstepGap)
+                return;
+            lastFootstepRealTime = Time.time;
+
+            int idx = Random.Range(0, footstepClips.Length);
+            if (audioSource.isPlaying) audioSource.Stop();
             audioSource.pitch = Random.Range(0.95f, 1.05f);
-            audioSource.PlayOneShot(footstepClips[index]);
+            audioSource.PlayOneShot(footstepClips[idx]);
         }
 
-
-
+        
         private void UpdateAnimator()
         {
             float currentSpeed = agent.velocity.magnitude;
             animator.SetFloat("Speed", currentSpeed);
         }
-
+        
         private void Patrol()
         {
             agent.isStopped = false;
-            agent.speed = patrolSpeed;
+            agent.speed     = patrolSpeed;
+
+            if (IsStuck() && doorTarget == null)
+            {
+                TryMoveTowardsClosestBlockingDoor(patrolPoints[currentPatrolIndex].position);
+                return;
+            }
 
             if (!agent.pathPending && agent.remainingDistance < 0.5f)
             {
@@ -232,26 +288,32 @@
             }
         }
 
+
+        /// <summary>
+        /// Calcule un chemin vers le prochain point de patrouille.
+        /// Si le chemin est invalide ou partiel, tente un détour via la porte la plus proche.
+        /// </summary>
         private void GoToNextPatrolPoint()
         {
             if (patrolPoints.Length == 0) return;
-        
+
             Vector3 targetPos = patrolPoints[currentPatrolIndex].position;
 
-            NavMeshPath path = new NavMeshPath();
+            NavMeshPath path = reusablePath;          // chemin réutilisable (évite GC)
             agent.CalculatePath(targetPos, path);
 
             if (path.status != NavMeshPathStatus.PathComplete)
             {
-                Debug.Log("🔒 Aucun chemin valide vers le point. Recherche de porte intermédiaire...");
+                Debug.Log("🔒 Chemin incomplet vers le point, porte à trouver…");
                 TryMoveTowardsClosestBlockingDoor(targetPos);
                 return;
             }
 
             agent.destination = targetPos;
             currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
-            Debug.Log("Patrouille vers le point: " + currentPatrolIndex);
+            Debug.Log($"Patrouille vers le point {currentPatrolIndex}");
         }
+
 
 
 
@@ -291,6 +353,62 @@
                 Debug.LogWarning("Aucune porte trouvée autour du mob");
                 currentBlockedTarget = null;
             }
+        }
+        
+        private Transform PickBestDoorTowards(Vector3 targetPos)
+        {
+            float bestScore = Mathf.Infinity;
+            Transform bestDoor = null;
+
+            Collider[] hits = Physics.OverlapSphere(transform.position, 50f);   // rayon de recherche
+            foreach (var hit in hits)
+            {
+                if (!hit.CompareTag("Door")) continue;
+
+                // ① distance NavMesh jusqu'à la porte
+                if (!NavMesh.CalculatePath(transform.position, hit.transform.position, NavMesh.AllAreas, reusablePath))
+                    continue;
+                float toDoor = PathLength(reusablePath);
+
+                // ② distance NavMesh de la porte jusqu'à la cible (joueur)
+                if (!NavMesh.CalculatePath(hit.transform.position, targetPos, NavMesh.AllAreas, reusablePath))
+                    continue;
+                float doorToTarget = PathLength(reusablePath);
+
+                float score = toDoor + doorToTarget;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestDoor  = hit.transform;
+                }
+            }
+            return bestDoor;
+        }
+
+        /// longueur totale d’un NavMeshPath
+        private float PathLength(NavMeshPath p)
+        {
+            float d = 0f;
+            for (int i = 1; i < p.corners.Length; i++)
+                d += Vector3.Distance(p.corners[i - 1], p.corners[i]);
+            return d;
+        }
+        
+        private bool SetPathToPlayerOrDoor()
+        {
+            NavMeshPath path = reusablePath;
+            agent.CalculatePath(player.position, path);
+
+            if (path.status == NavMeshPathStatus.PathComplete)
+            {
+                agent.SetPath(path);
+                doorTarget = null;          // plus de porte en attente
+                return true;                // on peut courir directement
+            }
+
+            // Ici : chemin partiel *ou* invalide ⟹ on cherche la porte
+            TryMoveTowardsClosestBlockingDoor(player.position);
+            return false;
         }
         
         private IEnumerator CheckDoorDistanceAndOpen()
@@ -334,14 +452,18 @@
 
             waitingForDoor = false;
 
-            if (currentBlockedTarget.HasValue)
+            if (currentState == MobState.Chasing)
             {
-                Debug.Log("Le mob reprend la patrouille vers l'objectif initial");
+                agent.SetDestination(player.position);   // relance immédiate
+            }
+            else if (currentBlockedTarget.HasValue)
+            {
                 agent.SetDestination(currentBlockedTarget.Value);
                 currentBlockedTarget = null;
             }
 
             doorTarget = null;
+
         }
 
 
@@ -376,34 +498,72 @@
         private void ChasePlayer()
         {
             agent.isStopped = false;
-            agent.speed = chaseSpeed;
-            agent.destination = player.position;
-            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            agent.speed     = chaseSpeed;
 
-            Debug.Log("Chasing le joueur, dist=" + distanceToPlayer + " pathStatus=" + agent.pathStatus);
-
-            if (!agent.pathPending && distanceToPlayer <= attackRange + 0.5f)
+            /* -------------------------------------------------
+               0) au tout début de la chasse, on oublie l’ancienne porte
+               ------------------------------------------------- */
+            if (Time.time - chaseStartTime < 0.1f)   // 1er ou 2ᵉ frame du state
             {
-                Debug.Log("À portée d'attaque (via attackRange), passage en Attacking");
+                doorTarget     = null;
+                waitingForDoor = false;
+            }
+
+            /* -------------------------------------------------
+               1) anti-blocage : on ignore IsStuck pendant 0,4 s
+               ------------------------------------------------- */
+            if (Time.time - chaseStartTime > chaseGrace)
+            {
+                if (IsStuck() && doorTarget == null)
+                {
+                    TryMoveTowardsClosestBlockingDoor(player.position);
+                    return;
+                }
+            }
+
+            /* -------------------------------------------------
+               2) porte déjà repérée ?
+               ------------------------------------------------- */
+            if (doorTarget != null)
+            {
+                agent.SetDestination(doorTarget.position);
+
+                if (!waitingForDoor)
+                    StartCoroutine(CheckDoorDistanceAndOpen());
+                return;
+            }
+
+            /* -------------------------------------------------
+               3) chemin vers le joueur
+               ------------------------------------------------- */
+            if (!SetPathToPlayerOrDoor()) return;
+
+            /* -------------------------------------------------
+               4) transitions Attacking / Searching
+               ------------------------------------------------- */
+            float dist = Vector3.Distance(transform.position, player.position);
+
+            if (!agent.pathPending && dist <= attackRange + 0.5f)
+            {
                 currentState = MobState.Attacking;
                 return;
             }
 
+            bool sees   = CanSeePlayer();
+            bool hears  = CanHearPlayer();
 
-            if (!CanSeePlayer())
+            if (!sees && !hears)
             {
-                Debug.Log("Joueur perdu de vue, passage en Searching");
-                isPlayerSeen = false;
+                isPlayerSeen      = false;
                 lastKnownPosition = player.position;
-                currentState = MobState.Searching;
+                currentState      = MobState.Searching;
                 PrepareInitialSearch();
-                return;
             }
             else
             {
                 lastKnownPosition = player.position;
-                isPlayerSeen = true;
             }
+
         }
 
         private void PrepareInitialSearch()
@@ -519,6 +679,11 @@
         {
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
+            currentState           = MobState.Attacking;
+            agent.isStopped        = true;
+            agent.autoBraking      = true;
+            agent.stoppingDistance = 2f;    
+            
             if (distanceToPlayer > attackRange + 1f)
             {
                 Debug.Log("Joueur hors de portée, retour en Chasing");
@@ -589,56 +754,70 @@
 
         private bool CanSeePlayer()
         {
-            Vector3 origin = transform.position + eyeLevelOffset;
-            Vector3 target = player.position + eyeLevelOffset;
-            Vector3 directionToPlayer = (target - origin).normalized;
-            float angle = Vector3.Angle(transform.forward, directionToPlayer);
-            float distanceToPlayer = Vector3.Distance(origin, target);
+            Vector3 origin  = transform.position + eyeLevelOffset;
+            Vector3 target  = player.position   + eyeLevelOffset;
+            Vector3 dir     = (target - origin).normalized;
 
-            if (angle < viewAngle / 2 && distanceToPlayer < viewDistance)
+            if (Vector3.Angle(transform.forward, dir) > viewAngle * .5f) return false;
+            if (Vector3.Distance(origin, target) > viewDistance)         return false;
+
+            if (Physics.Raycast(origin, dir, out RaycastHit hit, viewDistance, ~obstacleMask))
             {
-                if (Physics.Raycast(origin, directionToPlayer, out RaycastHit hit, viewDistance, ~obstacleMask))
+                if (hit.transform.CompareTag("Player")) return !player.GetComponent<FirstPersonController>().isHidden;
+
+                if (hit.transform.CompareTag("Door"))
                 {
-                    if (hit.transform.CompareTag("Player"))
-                    {
-                        // Vérifie si le joueur est caché
-                        FirstPersonController playerController = player.GetComponent<FirstPersonController>();
-                        if (playerController != null && playerController.isHidden)
-                        {
-                            Debug.Log("Le joueur est caché, l'IA ne le voit pas");
-                            return false;
-                        }
-                        return true;
-                    }
+                    doorTarget = hit.transform;
+                    return false;
                 }
+
             }
             return false;
         }
 
 
-        /// <summary>
-        /// Détecte si le mob peut entendre le joueur en fonction de l'audio réel.
-        /// </summary>
+        private bool IsStuck(float seconds = 0.15f)
+        {   
+            if (agent.velocity.sqrMagnitude < 0.01f && !agent.pathPending)
+            {
+                stuckTimer += Time.deltaTime;
+                return stuckTimer > seconds;
+            }
+
+            stuckTimer = 0f;
+            return false;
+        }
+
+        
         private bool CanHearPlayer()
         {
+            float now = Time.time;
+
+            if (now - lastHeardTime < hearingMemory)
+                return true;
+
             AudioSource playerAudio = player.GetComponent<AudioSource>();
             if (playerAudio != null && playerAudio.isPlaying)
             {
                 float distance = Vector3.Distance(transform.position, player.position);
                 if (distance < hearingRadius)
                 {
-                    Debug.Log("Joueur entendu par le mob");
-                    FirstPersonController playerController = player.GetComponent<FirstPersonController>();
-                    if (playerController != null && playerController.isHidden)
-                    {
-                        Debug.Log("Le joueur est caché, l'IA ne l'entend pas");
-                        return false;
-                    }
+                    FirstPersonController pc = player.GetComponent<FirstPersonController>();
+                    if (pc != null && pc.isHidden) return false;
+
+                    if (!currentlyHearing)
+                        Debug.Log("Joueur entendu par le mob");
+
+                    currentlyHearing = true;
+                    lastHeardTime    = now;
                     return true;
                 }
             }
+
+            currentlyHearing = false;
             return false;
         }
+
         
         private void OnDrawGizmosSelected()
         {
@@ -659,6 +838,21 @@
             foreach (var sp in searchPoints)
             {
                 Gizmos.DrawWireSphere(sp, 0.3f);
+            }
+        }
+        
+        private Coroutine chaseRefresh;
+        void OnEnable()  => chaseRefresh = StartCoroutine(RefreshChasePath());
+        void OnDisable() => StopCoroutine(chaseRefresh);
+
+        private IEnumerator RefreshChasePath()
+        {
+            var wait = new WaitForSeconds(0.25f);
+            while (true)
+            {
+                if (currentState == MobState.Chasing && !waitingForDoor)
+                    agent.SetDestination(player.position);
+                yield return wait;
             }
         }
     }

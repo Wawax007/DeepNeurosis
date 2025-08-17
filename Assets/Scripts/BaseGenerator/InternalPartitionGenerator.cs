@@ -263,10 +263,10 @@ public class InternalPartitionGenerator : MonoBehaviour
         return CellToWorld(center.x, center.y);
     }
 
-    private Vector3 CellToWorld(float gridX, float gridY)
+    public  Vector3 CellToWorld(float gridCol, float gridRow)
     {
-        float x = (-roomDimensions.x * 0.5f) + gridX * (roomDimensions.x / gridColumns) + (roomDimensions.x / gridColumns) / 2f;
-        float z = (-roomDimensions.z * 0.5f) + gridY * (roomDimensions.z / gridRows) + (roomDimensions.z / gridRows) / 2f;
+        float x = (-roomDimensions.x * 0.5f) + gridCol * (roomDimensions.x / gridColumns) + (roomDimensions.x / gridColumns) / 2f;
+        float z = (-roomDimensions.z * 0.5f) + gridRow * (roomDimensions.z / gridRows) + (roomDimensions.z / gridRows) / 2f;
         return transform.TransformPoint(new Vector3(x, 0f, z));
     }
 
@@ -280,7 +280,7 @@ public class InternalPartitionGenerator : MonoBehaviour
 
         Vector3 pos = w.wallObject.transform.position;
         Quaternion rot = w.wallObject.transform.rotation;
-        Destroy(w.wallObject);
+        if (Application.isPlaying) Destroy(w.wallObject); else DestroyImmediate(w.wallObject);
         placedWalls.RemoveAt(idx);
 
         GameObject prefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
@@ -402,7 +402,7 @@ public class InternalPartitionGenerator : MonoBehaviour
         if (wallPrefabsWithDoor == null || wallPrefabsWithDoor.Length == 0) return;
         Vector3 pos = w.wallObject.transform.position;
         Quaternion rot = w.wallObject.transform.rotation;
-        Destroy(w.wallObject);
+        if (Application.isPlaying) Destroy(w.wallObject); else DestroyImmediate(w.wallObject);
         GameObject prefab = wallPrefabsWithDoor[Random.Range(0, wallPrefabsWithDoor.Length)];
         w.wallObject = Instantiate(prefab, pos, rot, transform);
         w.hasDoor    = true;
@@ -488,6 +488,54 @@ public class InternalPartitionGenerator : MonoBehaviour
         }
     }
     #endregion
+    
+    #region Public API – sub-rooms ------------------------------------------------
+
+    /// <summary>
+    /// Informations minimales nécessaires au placer de props.
+    /// </summary>
+    public struct SubRoomInfo
+    {
+        public int id;               // Identifiant interne
+        public Vector2Int origin;    // Cellule en bas-gauche (row, col)
+        public Vector2Int size;      // Largeur / hauteur en cellules
+        public string tag;           // «bureau», «storage», etc. (laisse vide si tu n’en as pas encore)
+    }
+
+    /// <summary>
+    /// Retourne la description rectangulaire de chaque sous-salle.
+    /// </summary>
+    public IEnumerable<SubRoomInfo> GetAllSubRooms(string defaultTag = "generic")
+    {
+        foreach (var kvp in roomCells)          // roomCells est déjà rempli dans DetermineSubRooms() :contentReference[oaicite:0]{index=0}
+        {
+            int id = kvp.Key;
+            List<Vector2Int> cells = kvp.Value;
+            if (cells == null || cells.Count == 0) continue;
+
+            int minRow = int.MaxValue, maxRow = int.MinValue;
+            int minCol = int.MaxValue, maxCol = int.MinValue;
+
+            foreach (var cell in cells)
+            {
+                minRow = Mathf.Min(minRow, cell.x);
+                maxRow = Mathf.Max(maxRow, cell.x);
+                minCol = Mathf.Min(minCol, cell.y);
+                maxCol = Mathf.Max(maxCol, cell.y);
+            }
+
+            yield return new SubRoomInfo
+            {
+                id     = id,
+                origin = new Vector2Int(minCol, minRow),          // (col,row) → (x,z)
+                size   = new Vector2Int(maxCol - minCol + 1,
+                    maxRow - minRow + 1),
+                tag    = defaultTag                               // à remplacer plus tard si besoin
+            };
+        }
+    }
+    #endregion
+
 
     #region Debug / Gizmos
     private void OnDrawGizmos()

@@ -27,6 +27,33 @@ public class FloorManager : MonoBehaviour
         }
 
     }
+
+    private void OnApplicationQuit()
+    {
+        // Sauvegarde automatique selon l’étage courant
+        if (currentFloor == -2)
+        {
+            SaveStartRoom();
+        }
+        else if (currentFloor != 2)
+        {
+            SaveFloorToJson(currentFloor);
+        }
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (!pause) return;
+        // Sauvegarde de précaution en cas de mise en pause (ex: alt-tab, suspend)
+        if (currentFloor == -2)
+        {
+            SaveStartRoom();
+        }
+        else if (currentFloor != 2)
+        {
+            SaveFloorToJson(currentFloor);
+        }
+    }
     
     private IEnumerator DeferredLoadStartRoom()
     {
@@ -123,16 +150,20 @@ public class FloorManager : MonoBehaviour
 
         if (glassParent != null)
         {
+            // Recherche de tous les conteneurs de verre cassé (compat: BrokenGlass / breakedGlass)
             foreach (Transform child in glassParent)
             {
-                if (child.name.Contains("breakedGlass"))
+                string n = child.name.ToLowerInvariant();
+                if (n.Contains("brokenglass") || n.Contains("breakedglass"))
                 {
-                    foreach (Transform frag in child)
+                    var rbs = child.GetComponentsInChildren<Rigidbody>();
+                    foreach (var rb in rbs)
                     {
+                        var t = rb.transform;
                         fragments.Add(new SavedGlassFragment
                         {
-                            position = frag.position,
-                            rotation = frag.rotation
+                            position = t.position,
+                            rotation = t.rotation
                         });
                     }
                 }
@@ -144,7 +175,7 @@ public class FloorManager : MonoBehaviour
             extinguisherPosition = extinguisher.transform.position,
             extinguisherRotation = extinguisher.transform.rotation,
             counterFuseInserted = counter.IsFuseInserted(),
-            glassBroken = (glass == null),
+            glassBroken = (glass == null) || fragments.Count > 0,
             glassFragments = fragments
         };
 
@@ -164,9 +195,46 @@ public class FloorManager : MonoBehaviour
         StartRoomSaveData data = JsonUtility.FromJson<StartRoomSaveData>(json);
 
         GameObject extinguisher = GameObject.Find("Extinguisher");
+        if (extinguisher == null)
+        {
+            // Fallback: tag or partial name within StartRoom
+            var byTag = GameObject.FindGameObjectWithTag("Extinguisher");
+            if (byTag != null) extinguisher = byTag;
+            else
+            {
+                var parent = GameObject.Find("StartRoom");
+                if (parent != null)
+                {
+                    foreach (Transform t in parent.transform.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (t.name.ToLowerInvariant().Contains("extinguisher"))
+                        {
+                            extinguisher = t.gameObject; break;
+                        }
+                    }
+                }
+            }
+        }
         if (extinguisher != null)
+        {
+            var rb = extinguisher.GetComponent<Rigidbody>();
+            bool hadRb = rb != null;
+            if (hadRb)
+            {
+                rb.isKinematic = true; // gèle la physique le temps de replacer
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.Sleep();
+            }
             extinguisher.transform.position = data.extinguisherPosition;
             extinguisher.transform.rotation = data.extinguisherRotation;
+            Physics.SyncTransforms();
+            if (hadRb)
+            {
+                StartCoroutine(UnfreezeNextFrame(rb));
+            }
+        }
+
         CounterDoor counter = GameObject.FindObjectOfType<CounterDoor>();
         if (counter != null && data.counterFuseInserted)
             counter.ForceInsertFuse();
@@ -177,10 +245,13 @@ public class FloorManager : MonoBehaviour
             if (glass != null)
             {
                 Transform parent = GameObject.Find("StartRoom")?.transform;
+                if (parent == null) return;
 
+                // Nettoie d’éventuels restes
                 foreach (Transform child in parent)
                 {
-                    if (child.name.Contains("BrokenGlass"))
+                    string n = child.name.ToLowerInvariant();
+                    if (n.Contains("brokenglass") || n.Contains("breakedglass"))
                         Destroy(child.gameObject);
                 }
 
@@ -191,20 +262,20 @@ public class FloorManager : MonoBehaviour
                     parent
                 );
 
-                Transform[] children = broken.GetComponentsInChildren<Transform>();
-                int fragmentCount = Mathf.Min(children.Length, data.glassFragments.Count);
+                // Restaure sur les fragments physiques
+                var frags = broken.GetComponentsInChildren<Rigidbody>();
+                int fragmentCount = Mathf.Min(frags.Length, data.glassFragments.Count);
 
                 for (int i = 0; i < fragmentCount; i++)
                 {
-                    Transform frag = children[i];
+                    Transform frag = frags[i].transform;
                     frag.position = data.glassFragments[i].position;
                     frag.rotation = data.glassFragments[i].rotation;
 
-                    Rigidbody rb = frag.GetComponent<Rigidbody>();
-                    if (rb != null)
-                    {
-                        rb.isKinematic = true; 
-                    }
+                    var rb = frags[i];
+                    rb.isKinematic = true;
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
                 }
 
                 glass.gameObject.SetActive(false);
@@ -212,6 +283,16 @@ public class FloorManager : MonoBehaviour
         }
 
 
+    }
+
+    private IEnumerator UnfreezeNextFrame(Rigidbody rb)
+    {
+        yield return null; // attend une frame
+        if (rb != null)
+        {
+            rb.WakeUp();
+            rb.isKinematic = false;
+        }
     }
 
 

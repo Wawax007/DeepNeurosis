@@ -44,6 +44,8 @@ public class ExtractionConsoleLogic : MonoBehaviour
     [Header("Référence bouton")]
     public ValidateButton validateButtonScript;
     
+    private bool securityInsertedSoundPlayed = false;
+    private bool navigationInsertedSoundPlayed = false;
     
     private void Awake()
     {
@@ -53,17 +55,34 @@ public class ExtractionConsoleLogic : MonoBehaviour
         selectedDestination = Destination.Surface;
     }
 
+    public void Update()
+    {
+        CheckModuleInsertions();
+    }
+
     public bool AreModulesInserted()
     {
-        bool areInserted = socketSecurity != null && socketSecurity.IsFilled &&
-                           socketNavigation != null && socketNavigation.IsFilled;
-
-        if (areInserted)
+        return socketSecurity != null && socketSecurity.IsFilled &&
+               socketNavigation != null && socketNavigation.IsFilled;
+    }
+    
+    private void CheckModuleInsertions()
+    {
+        if (!securityInsertedSoundPlayed 
+            && socketSecurity != null 
+            && socketSecurity.IsFilled)
         {
             PlaySound(successSound);
+            securityInsertedSoundPlayed = true;
         }
 
-        return areInserted;
+        if (!navigationInsertedSoundPlayed 
+            && socketNavigation != null 
+            && socketNavigation.IsFilled)
+        {
+            PlaySound(successSound);
+            navigationInsertedSoundPlayed = true;
+        }
     }
 
     public void SetValue(RotarySelector.SelectorType type, string value)

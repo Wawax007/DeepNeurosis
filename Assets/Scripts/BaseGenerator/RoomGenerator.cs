@@ -56,13 +56,17 @@ public class RoomGenerator : MonoBehaviour
         Debug.Log($"[RoomGenerator:{name}] Tous les emplacements trouvés. Initialisation OK.");
         onRoomReady?.Invoke();
 
-        // ➕ Ajout ici pour placement automatique des props
         var placer = GetComponent<PropPlacer>();
         if (placer != null)
         {
-            Debug.Log($"[RoomGenerator:{name}] Placement des props déclenché.");
-            placer.PlaceClueProps();
+            var fm = FindObjectOfType<FloorManager>();
+            if (fm != null)
+                placer.currentFloor = fm.currentFloor;
+
+            Debug.Log($"[RoomGenerator:{name}] Placement des props déclenché (floor {placer.currentFloor}).");
+            placer.PlaceAllProps();
         }
+
     }
 
     /// <summary>

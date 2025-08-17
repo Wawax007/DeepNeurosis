@@ -1,0 +1,89 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: "Exécuter les tests Unity (EditMode & PlayMode)"
+        type: boolean
+        default: false
+        required: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke check (rapide)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (no LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          fetch-depth: 0
+      - name: Vérifier la présence du projet Unity
+        run: |
+          test -f ProjectSettings/ProjectVersion.txt
+          echo "ProjectVersion.txt trouvé"
+      - name: Vérifier la version Unity attendue
+        run: |
+          grep -q "2022.3.37f1" ProjectSettings/ProjectVersion.txt && echo "Version Unity OK" || (echo "Version Unity différente: $(cat ProjectSettings/ProjectVersion.txt)" && exit 1)
+      - name: Lister dossiers de tests (si présents)
+        run: |
+          ls -la Tests* || true
+
+  tests:
+    name: Unity Tests (EditMode & PlayMode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_tests == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ runner.os }}-${{ hashFiles('**/Packages/manifest.json') }}-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-${{ runner.os }}-
+
+      - name: EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: .
+          unityVersion: 2022.3.37f1
+          testMode: editmode
+          artifactsPath: TestResults/EditMode
+
+      - name: PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: .
+          unityVersion: 2022.3.37f1
+          testMode: playmode
+          artifactsPath: TestResults/PlayMode
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults/**
+          retention-days: 7

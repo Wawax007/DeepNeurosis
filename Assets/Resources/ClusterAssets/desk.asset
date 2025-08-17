@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21cfc887504d0544e8e455822520dc25, type: 3}
+  m_Name: desk
+  m_EditorClassIdentifier: 
+  tag: generic
+  footprintMask: {fileID: 0}
+  variants:
+  - {fileID: 5267912979501992747, guid: 4522e083a02efbf4aba28d14a945559c, type: 3}
+  weight: 1
+  minArea: 5
+  maxArea: 5
+  rectWidth: 25
+  rectHeight: 25
+  useRectMask: 1

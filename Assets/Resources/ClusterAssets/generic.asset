@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21cfc887504d0544e8e455822520dc25, type: 3}
+  m_Name: generic
+  m_EditorClassIdentifier: 
+  tag: generic
+  allowedFloors: 
+  useRectMask: 1
+  rectWidth: 2
+  rectHeight: 3
+  footprintMask: {fileID: 0}
+  variants:
+  - {fileID: 5267912979501992747, guid: 4522e083a02efbf4aba28d14a945559c, type: 3}
+  weight: 1
+  minArea: 1
+  maxArea: 25
+  positionOffset: {x: 0, y: 0, z: 0}
+  rotationOffset: {x: 0, y: 0, z: 0}
+  snapToGround: 1
+  alwaysSpawn: 0
+  maxPerSubRoom: 3
+  placeAlongWall: 0
+  wallProbability: 1

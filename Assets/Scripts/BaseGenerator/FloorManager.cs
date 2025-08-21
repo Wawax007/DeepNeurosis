@@ -70,7 +70,7 @@ public class FloorManager : MonoBehaviour
     private IEnumerator DeferredLoadStartRoom()
     {
         yield return null;
-        LoadStartRoom();
+        LoadStartRoom(true);
     }
 
 
@@ -90,7 +90,7 @@ public class FloorManager : MonoBehaviour
             baseGenerator.IsFloorReady = true;
 
             SetStartRoomActive(true); 
-            LoadStartRoom();
+            LoadStartRoom(false);
 
             Debug.Log("[FloorManager] StartRoom already in scene. No generation or loading required.");
             StartCoroutine(WaitForFloorReady());
@@ -204,7 +204,7 @@ public class FloorManager : MonoBehaviour
     }
 
 
-    private void LoadStartRoom()
+    private void LoadStartRoom(bool playAnimations = true)
     {
         string path = GetStartRoomSavePath();
         if (!File.Exists(path)) return;
@@ -255,7 +255,7 @@ public class FloorManager : MonoBehaviour
 
         CounterDoor counter = GameObject.FindObjectOfType<CounterDoor>();
         if (counter != null && data.counterFuseInserted)
-            counter.ForceInsertFuse();
+            counter.ForceInsertFuse(playAnimations);
 
         if (data.glassBroken && data.glassFragments != null && data.glassFragments.Count > 0)
         {

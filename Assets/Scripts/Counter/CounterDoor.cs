@@ -50,21 +50,32 @@ public class CounterDoor : MonoBehaviour, IInteractable
     
     public void ForceInsertFuse()
     {
+        // Comportement historique: joue les animations
+        ForceInsertFuse(true);
+    }
+
+    // Nouvelle surcharge permettant une restauration silencieuse
+    public void ForceInsertFuse(bool playAnimations)
+    {
         fuseInserted = true;
         isOpen = true;
 
         if (diodeRenderer != null && diodeOnMaterial != null)
             diodeRenderer.material = diodeOnMaterial;
 
-        // Assure l'ouverture des portes de l'ascenseur lors d'un chargement
-        ElevatorController elevatorController = FindObjectOfType<ElevatorController>();
-        if (elevatorController != null &&
-            elevatorController.doorAnimator != null &&
-            elevatorController.doorAnimator.runtimeAnimatorController != null)
+        // Déclenche l'animation d'ouverture des portes de l'ascenseur uniquement si demandé
+        if (playAnimations)
         {
-            elevatorController.doorAnimator.SetTrigger("Open");
+            ElevatorController elevatorController = FindObjectOfType<ElevatorController>();
+            if (elevatorController != null &&
+                elevatorController.doorAnimator != null &&
+                elevatorController.doorAnimator.runtimeAnimatorController != null)
+            {
+                elevatorController.doorAnimator.SetTrigger("Open");
+            }
         }
 
+        // Ancre le fusible si présent
         FusibleItem fusible = FindObjectOfType<FusibleItem>();
         if (fusible != null && !fusible.IsAnchored)
         {
@@ -73,7 +84,19 @@ public class CounterDoor : MonoBehaviour, IInteractable
         }
 
         StopAllCoroutines();
-        StartCoroutine(RotateDoor());
+
+        if (playAnimations)
+        {
+            StartCoroutine(RotateDoor());
+        }
+        else
+        {
+            // Restauration silencieuse: on fige directement la rotation en position ouverte
+            if (pivot != null)
+            {
+                pivot.localRotation = openRotation;
+            }
+        }
     }
 
 

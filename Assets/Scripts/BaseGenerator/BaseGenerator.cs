@@ -29,6 +29,7 @@ public class BaseGenerator : MonoBehaviour
     [SerializeField]
     private int floorIndex;
     public int GetFloorIndex() => floorIndex;
+    public void SetFloorIndex(int value) => floorIndex = value;
 
     [Header("Mob Settings")]
     public GameObject mobPrefab;
@@ -309,7 +310,7 @@ public class BaseGenerator : MonoBehaviour
 
         IsFloorReady = true;
         // Réactive la génération pour les futurs étages générés
-        PropPlacer.SkipGeneration = false;
+        // PropPlacer.SkipGeneration = false; // Retiré: évite une course qui dupliquait les props lors d'un chargement
     }
 
 

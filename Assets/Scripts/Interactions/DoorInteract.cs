@@ -1,18 +1,37 @@
 using UnityEngine;
 
+/// <summary>
+/// Gère l’ouverture/fermeture d’une porte via interaction joueur.
+/// </summary>
 public class DoorInteract : MonoBehaviour, IInteractable
 {
     [Header("Door Settings")]
+    /// <summary>
+    /// Angle d’ouverture de la porte (en degrés).
+    /// </summary>
     public float openAngle = 90f;
+    /// <summary>
+    /// Vitesse d’animation de l’ouverture/fermeture.
+    /// </summary>
     public float openSpeed = 2f;
 
     [Header("References")]
+    /// <summary>
+    /// Point de pivot utilisé pour la rotation de la porte.
+    /// </summary>
     public Transform pivot;
+    /// <summary>
+    /// Obstacle NavMesh pour bloquer le pathfinding quand la porte est fermée.
+    /// </summary>
     public UnityEngine.AI.NavMeshObstacle obstacle;
 
     private bool isOpen = false;
     private Quaternion initialRotation;
     private Quaternion targetRotation;
+
+    /// <summary>
+    /// Indique si la porte est actuellement ouverte.
+    /// </summary>
     public bool IsOpen => isOpen;
 
     private void Start()
@@ -20,6 +39,9 @@ public class DoorInteract : MonoBehaviour, IInteractable
         InitializeRotations();
     }
 
+    /// <summary>
+    /// Déclenche l’interaction d’ouverture/fermeture de la porte.
+    /// </summary>
     public void Interact()
     {
         ToggleDoorState();

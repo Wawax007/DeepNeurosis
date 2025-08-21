@@ -3,13 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
+/// <summary>
+/// Gère la persistance et le chargement des étages (StartRoom, étages procéduraux, ExtractionPod).
+/// </summary>
 public class FloorManager : MonoBehaviour
 {
     [Header("References")]
+    /// <summary>
+    /// Générateur principal utilisé pour (re)générer un étage.
+    /// </summary>
     public BaseGenerator baseGenerator; // Glisser l’objet qui a BaseGenerator dans l’inspecteur
 
     [Header("Floor Settings")]
+    /// <summary>
+    /// Indice de l’étage courant (-2 = StartRoom, 2 = ExtractionPod).
+    /// </summary>
     public int currentFloor = -2;       
+    /// <summary>
+    /// Nom du dossier persistant où sont écrites/lu les données des étages.
+    /// </summary>
     public string saveFolderName = "FloorsData";
     private GameObject startRoomObj;
     [SerializeField] private GameObject extractionPodObj;
@@ -65,6 +77,7 @@ public class FloorManager : MonoBehaviour
     /// <summary>
     /// Appelé quand le joueur choisit un étage sur l'ascenseur.
     /// </summary>
+    /// <param name="targetFloor">Indice de l’étage à charger (-2 StartRoom, 2 ExtractionPod).</param>
     public void GoToFloor(int targetFloor)
     {
         SaveAndUnloadCurrentFloor();

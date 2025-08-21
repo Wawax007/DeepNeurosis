@@ -4,6 +4,10 @@
     using System.Collections.Generic;
     using PlayerScripts;
 
+    /// <summary>
+    /// IA de l’ennemi: patrouille, détection (vue/ouïe), poursuite, recherche et attaque,
+    /// avec navigation NavMesh et gestion de sons de pas.
+    /// </summary>
     public class MobAI : MonoBehaviour
     {
         public enum MobState

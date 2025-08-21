@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Données d’une sous-salle: origine monde, indices de grille, taille en cellules et tag.
+/// </summary>
 public struct SubRoomData
 {
     public int id;

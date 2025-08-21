@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Gère la casse d’une vitre et le spawn de fragments physiques avec un léger impact sonore.
+/// </summary>
 public class BreakableGlass : MonoBehaviour
 {
     public float breakForce = 5f; // Force minimale pour casser la vitre

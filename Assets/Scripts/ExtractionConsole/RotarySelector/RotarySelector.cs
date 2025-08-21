@@ -1,6 +1,10 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Sélecteur rotatif de la console: gère les options (Priorité/Protocole/Destination),
+/// applique la valeur à la console et met à jour la tête visuelle.
+/// </summary>
 public class RotarySelector : MonoBehaviour
 {
     public enum SelectorType { Priority, Protocol, Destination }

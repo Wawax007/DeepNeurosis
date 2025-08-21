@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Élément « fusible » insérable: s’ancre dans un socket en désactivant sa physique,
+/// se parentant au socket et devenant immobile.
+/// </summary>
 public class FusibleItem : MonoBehaviour
 {
     public bool IsAnchored { get; private set; }

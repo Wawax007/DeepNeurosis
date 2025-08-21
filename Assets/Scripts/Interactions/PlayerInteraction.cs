@@ -5,6 +5,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+/// <summary>
+/// Gère l’interaction joueur: raycast, highlight (outline), prise/lâcher d’objets physiques,
+/// et interactions spécifiques (IInteractable, ValidateButton, RotarySelector).
+/// </summary>
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerInteraction : MonoBehaviour
 {
@@ -174,7 +178,8 @@ public class PlayerInteraction : MonoBehaviour
     }
 
     /// <summary>
-
+    /// Désactive le surlignage/outline courant et nettoie l’état d’UI associé.
+    /// </summary>
     void DisableHighlight()
     {
         if (currentOutline != null)

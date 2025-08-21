@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Ajuste dynamiquement la portée et l’intensité de la torche selon la distance d’obstacle détectée.
+/// </summary>
 public class TorchAdaptiveLight : MonoBehaviour
 {
     [Header("Lights")]

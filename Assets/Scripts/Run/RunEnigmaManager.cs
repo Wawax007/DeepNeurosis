@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Orchestrateur d’énigmes pour une run : sélection de l’énigme active,
+/// accès aux indices (clues) par étage et réinitialisation des placements.
+/// </summary>
 public class RunEnigmaManager : MonoBehaviour
 {
     public static RunEnigmaManager Instance;

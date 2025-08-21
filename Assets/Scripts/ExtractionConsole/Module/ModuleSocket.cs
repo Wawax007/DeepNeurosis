@@ -1,6 +1,10 @@
 using UnityEngine;
 using ExtractionConsole.Module;
 
+/// <summary>
+/// Socket de la console d’extraction: accepte un ModuleItem du type requis,
+/// l’ancre et met à jour la diode/état.
+/// </summary>
 public class ModuleSocket : MonoBehaviour
 {
     public ModuleType requiredType;

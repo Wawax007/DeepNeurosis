@@ -2,6 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Porte de comptoir interactive: s’ouvre/ferme, détecte et ancre un fusible,
+/// puis allume une diode et ouvre l’ascenseur lorsqu’alimentée.
+/// </summary>
 public class CounterDoor : MonoBehaviour, IInteractable
 {
     [Header("Porte")]
@@ -51,6 +55,15 @@ public class CounterDoor : MonoBehaviour, IInteractable
 
         if (diodeRenderer != null && diodeOnMaterial != null)
             diodeRenderer.material = diodeOnMaterial;
+
+        // Assure l'ouverture des portes de l'ascenseur lors d'un chargement
+        ElevatorController elevatorController = FindObjectOfType<ElevatorController>();
+        if (elevatorController != null &&
+            elevatorController.doorAnimator != null &&
+            elevatorController.doorAnimator.runtimeAnimatorController != null)
+        {
+            elevatorController.doorAnimator.SetTrigger("Open");
+        }
 
         FusibleItem fusible = FindObjectOfType<FusibleItem>();
         if (fusible != null && !fusible.IsAnchored)

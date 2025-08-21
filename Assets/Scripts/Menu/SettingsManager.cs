@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Gère les paramètres du jeu (audio, sensibilité, onglets UI) et leur persistance via PlayerPrefs.
+/// </summary>
 public class SettingsManager : MonoBehaviour
 {
     private static SettingsManager Instance { get; set; }

@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Carte 2D simple d’occupation pour marquer/valider des cellules lors du placement procédural.
+/// </summary>
 public class SpatialMap
 {
     readonly bool[,] cells; // [x,z]

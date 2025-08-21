@@ -1,6 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
+/// <summary>
+/// Décrit un « cluster » de props (variants, empreinte/mask, contraintes de placement,
+/// pondération et options d’ajustement) utilisé par le générateur de salle.
+/// </summary>
 [CreateAssetMenu(menuName="ProcGen/Cluster")]
 public class ClusterAsset : ScriptableObject
 {

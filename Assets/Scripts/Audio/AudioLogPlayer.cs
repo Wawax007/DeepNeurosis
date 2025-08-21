@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Lecteur de logs audio interactif: joue un clip, optionnellement au démarrage,
+/// et via l’interface IInteractable.
+/// </summary>
 [RequireComponent(typeof(AudioSource))]
 public class AudioLogPlayer : MonoBehaviour, IInteractable
 {

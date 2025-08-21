@@ -1,5 +1,9 @@
 using UnityEngine;
 using PlayerScripts;
+
+/// <summary>
+/// Porte de casier permettant au joueur d’entrer/sortir d’une cachette et de masquer l’avatar.
+/// </summary>
 public class LockerDoor : MonoBehaviour, IInteractable
 {
     [Header("Door Settings")]

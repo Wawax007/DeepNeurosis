@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Crée un mesh enfant “gonflé” avec un matériau unicolore pour simuler un outline activable.
+/// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class OutlineMeshCreator : MonoBehaviour
 {

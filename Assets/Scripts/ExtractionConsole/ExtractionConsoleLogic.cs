@@ -3,6 +3,10 @@ using ExtractionConsole.Module;
 using UnityEngine;
 using UnityEngine.Events;
 
+/// <summary>
+/// Logique de la console d’extraction: gestion des modules insérés, des sélecteurs,
+/// validation de la combinaison et déclenchement des événements de succès/échec.
+/// </summary>
 public class ExtractionConsoleLogic : MonoBehaviour
 {
     public ModuleSocket socketSecurity;

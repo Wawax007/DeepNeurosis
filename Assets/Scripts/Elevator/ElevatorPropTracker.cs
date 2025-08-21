@@ -2,6 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Suit les props d’énigme présents dans la cabine d’ascenseur afin de les préserver
+/// lors des transitions d’étage, et notifie le transfert quand ils en sortent.
+/// </summary>
 public class ElevatorPropTracker : MonoBehaviour
 {
     public HashSet<GameObject> trackedProps = new();

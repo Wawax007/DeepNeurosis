@@ -4,6 +4,10 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.Events;
 
+/// <summary>
+/// Gère l’initialisation d’une salle: repère les emplacements de murs,
+/// instancie les segments (mur/porte/fenêtre) et déclenche le placement des props.
+/// </summary>
 public class RoomGenerator : MonoBehaviour
 {
     public GameObject wallPrefab;

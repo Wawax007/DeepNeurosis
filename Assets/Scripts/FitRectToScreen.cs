@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Ajuste dynamiquement un RectTransform pour remplir l’écran, en tenant compte du scale du Canvas.
+/// </summary>
 [ExecuteAlways]
 [RequireComponent(typeof(RectTransform))]
 public class FitRectToScreen : MonoBehaviour

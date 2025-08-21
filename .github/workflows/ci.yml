@@ -123,7 +123,7 @@ jobs:
           unityVersion: 2022.3.37f1
           targetPlatform: StandaloneWindows64
           buildName: DeepNeurosis
-          outputPath: build
+          buildPath: build
 
       - name: Zip build
         run: |
@@ -135,3 +135,22 @@ jobs:
           name: DeepNeurosis_Windows
           path: DeepNeurosis_Windows.zip
           retention-days: 7
+
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: build_windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DeepNeurosis_Windows
+          path: dist
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/DeepNeurosis_Windows.zip
+          generate_release_notes: true
+      - name: Release summary
+        run: echo "Release créée pour $GITHUB_REF"

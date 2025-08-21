@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace ExtractionConsole.Module
 {
+    /// <summary>
+    /// Représente un module insérable (Security/Navigation) et gère son ancrage dans un socket.
+    /// </summary>
     public class ModuleItem : MonoBehaviour
     {
         public ModuleType moduleType;

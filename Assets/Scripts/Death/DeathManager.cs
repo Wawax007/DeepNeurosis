@@ -6,6 +6,9 @@ using UnityEngine.UI;
 using TMPro;
 using Random = UnityEngine.Random; // si tu utilises TextMeshPro
 
+/// <summary>
+/// Gère la séquence de mort: fade, message, sonorisation, retour StartRoom et respawn contrôlé.
+/// </summary>
 public class DeathManager : MonoBehaviour
 {
     public FirstPersonController playerController;

@@ -6,6 +6,10 @@ namespace PlayerScripts
 {
     [RequireComponent(typeof(CharacterController))]
 
+    /// <summary>
+    /// Contrôleur FPS du joueur: déplacements, rotation caméra, saut/gravité,
+    /// gestion du curseur et déclenchement des sons de pas.
+    /// </summary>
     public class FirstPersonController : MonoBehaviour
     {
         [Header("Player Settings")] public float walkSpeed = 5f;

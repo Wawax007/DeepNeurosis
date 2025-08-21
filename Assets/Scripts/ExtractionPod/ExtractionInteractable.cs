@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Déclenche l’enchaînement d’extraction lorsqu’interagi, en s’assurant de ne le faire qu’une fois.
+/// </summary>
 public class ExtractionInteractable : MonoBehaviour, IInteractable
 {
     private bool hasBeenUsed = false;

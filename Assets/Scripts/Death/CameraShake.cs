@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// Service simple de secousse caméra avec intensité/durée, accessible via un singleton.
+/// </summary>
 public class CameraShake : MonoBehaviour
 {
     public static CameraShake Instance;

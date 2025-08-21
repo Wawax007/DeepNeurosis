@@ -1,6 +1,10 @@
 using System.Collections;
 using UnityEngine;
 
+/// <summary>
+/// Active et orchestre la capsule d’extraction: activation interactable, transitions audio,
+/// fondu écran et séquence de fin après validation de la console.
+/// </summary>
 public class ExtractionPodActivator : MonoBehaviour
 {
     [Header("Interaction")]

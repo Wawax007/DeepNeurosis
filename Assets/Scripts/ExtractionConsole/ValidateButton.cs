@@ -1,6 +1,9 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>
+/// Bouton de validation de la console: anime l’appui et déclenche la validation de séquence.
+/// </summary>
 public class ValidateButton : MonoBehaviour
 {
     public ExtractionConsoleLogic consoleLogic;

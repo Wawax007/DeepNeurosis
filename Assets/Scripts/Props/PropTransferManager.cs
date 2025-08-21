@@ -4,6 +4,11 @@ using System.Linq;
 using ExtractionConsole.Module;
 using UnityEngine;
 
+/// <summary>
+/// Gère le transfert et la préservation des props entre étages via l’ascenseur.
+/// Assure le détachement, la re‑parentalisation dans la room la plus proche
+/// et la mise à jour des données de sauvegarde associées (CluePropInstance).
+/// </summary>
 public class PropTransferManager : MonoBehaviour
 {
     public static PropTransferManager Instance;

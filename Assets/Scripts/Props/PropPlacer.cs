@@ -3,24 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using ExtractionConsole.Module;
 
-// ============================================================================
-//  PROPPLACER – VERSION COMPLÈTE 08‑07‑2025
-//  • Pipeline "Cluster + Décorateur" + fallback anchors.
-//  • Grille d’occupation partagée SpatialMap.
-//  • Générateur PoissonDisk interne.
-//  • Compatible avec InternalPartitionGenerator (gridRows / gridColumns publics + CellToWorld).
-// ============================================================================
+/// <summary>
+/// Place les props de la salle (clusters, micro-props, accents et éléments d’énigme),
+/// avec support de restauration depuis sauvegarde et d’anchors legacy.
+/// </summary>
 public class PropPlacer : MonoBehaviour
 {
+    /// <summary>
+    /// Lance la génération/pose de tous les props (alias de <see cref="PlaceAllProps"/>).
+    /// </summary>
     public void PlaceClueProps() => PlaceAllProps();
 
     // ---------------------------------------------------------------------
     //   CHAMPS EXPOSES
     // ---------------------------------------------------------------------
     [Header("N° d'étage de cette salle")]
-    [HideInInspector] public int currentFloor;
+    [HideInInspector]
+    public int currentFloor;
     
-    // Empêche la génération pendant le chargement d'un étage depuis une sauvegarde
+    /// <summary>
+    /// Si vrai, empêche toute génération (utilisé lors d’un chargement depuis une sauvegarde).
+    /// </summary>
     public static bool SkipGeneration = false;
 
     [Header("Librairie de clusters (macro‑prefabs)")]
@@ -47,11 +50,18 @@ public class PropPlacer : MonoBehaviour
     private readonly List<Transform> floorAnchors = new();      // anchors d’énigme
     private readonly HashSet<Transform> usedEnvAnchors = new(); // anchors legacy déjà pris
 
+    /// <summary>
+    /// Tampon runtime des props d’énigme placés pour la sauvegarde et le rechargement.
+    /// </summary>
     public static readonly List<SavedClueProp> tempPlacedClues = new();
 
     // =====================================================================
     //   ENTREE PRINCIPALE
     // =====================================================================
+    /// <summary>
+    /// Place les différents types de props dans la salle (clusters, micro‑props,
+    /// anchors legacy et éléments d’énigme) si la génération n’est pas bloquée.
+    /// </summary>
     public void PlaceAllProps()
     {
         // Bloque toute génération si on est en cours de chargement depuis une sauvegarde
@@ -103,6 +113,13 @@ public class PropPlacer : MonoBehaviour
     // =====================================================================
     //   PASS CLUSTERS
     // =====================================================================
+    /// <summary>
+    /// Tente de placer des clusters dans une sous-salle en respectant les contraintes
+    /// de taille, de tag, d’étage et d’emprise sur la carte d’occupation.
+    /// </summary>
+    /// <param name="sub">Sous-salle cible.</param>
+    /// <param name="map">Carte d’occupation globale pour éviter les chevauchements.</param>
+    /// <param name="rng">Générateur pseudo‑aléatoire déterministe.</param>
     private void PlaceClusters(SubRoomData sub, SpatialMap map, System.Random rng)
     {
         var pg = GetComponent<InternalPartitionGenerator>();
@@ -178,11 +195,17 @@ public class PropPlacer : MonoBehaviour
     // =====================================================================
     //   PASS DECORATEUR MICRO‑PROPS
     // =====================================================================
+    /// <summary>
+    /// Éparpille des micro‑props (ou accents) dans la sous‑salle via un échantillonnage Poisson,
+    /// en respectant la carte d’occupation et les zones interdites.
+    /// </summary>
+    /// <param name="sub">Sous-salle cible.</param>
+    /// <param name="map">Carte d’occupation globale.</param>
+    /// <param name="rng">Générateur pseudo‑aléatoire.</param>
     private void Decorate(SubRoomData sub, SpatialMap map, System.Random rng)
     {
         if (microProps == null || microProps.Length == 0) return;
 
-        const float cell    = 0.4f; // résolution occupancy
         const float minDist = 0.6f; // rayon Poisson
 
         foreach (var p in PoissonDisk.Generate(sub.size, minDist, rng))
@@ -223,6 +246,9 @@ public class PropPlacer : MonoBehaviour
     // =====================================================================
     //   ENIGMA PROPS   (inchangé)
     // =====================================================================
+    /// <summary>
+    /// Recherche tous les anchors d’indices ("ClueAnchor") présents dans la hiérarchie de la salle.
+    /// </summary>
     private void FindClueAnchors()
     {
         floorAnchors.Clear();
@@ -230,6 +256,11 @@ public class PropPlacer : MonoBehaviour
             if (t.name == "ClueAnchor") floorAnchors.Add(t);
     }
 
+    /// <summary>
+    /// Place les props liés à l’énigme courante sur des anchors compatibles
+    /// (ou en fallback au centre de la plus grande sous‑salle) et enregistre
+    /// leur état pour la sauvegarde.
+    /// </summary>
     private void PlaceEnigmaClue()
     {
         var clues = RunEnigmaManager.Instance.GetCluesForFloor(currentFloor);
@@ -246,8 +277,8 @@ public class PropPlacer : MonoBehaviour
         };
 
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
-            foreach (var tag in anchorsByTag.Keys)
-                if (t.CompareTag(tag) && !IsNearForbiddenZone(t.position)) anchorsByTag[tag].Add(t);
+            foreach (var anchorTag in anchorsByTag.Keys)
+                if (t.CompareTag(anchorTag) && !IsNearForbiddenZone(t.position)) anchorsByTag[anchorTag].Add(t);
 
         foreach (var clue in clues)
         {
@@ -307,6 +338,10 @@ public class PropPlacer : MonoBehaviour
     // =====================================================================
     //   LEGACY ANCHORS – ENVIRONMENT
     // =====================================================================
+    /// <summary>
+    /// Place un nombre limité de micro‑props sur des anchors « environnement » legacy
+    /// identifiés par leurs tags.
+    /// </summary>
     private void PlaceEnvironmentPropsLegacy()
     {
         usedEnvAnchors.Clear();
@@ -334,17 +369,25 @@ public class PropPlacer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Retourne la liste des transforms marqués par l’un des tags d’anchors environnement.
+    /// </summary>
     private List<Transform> FindEnvironmentAnchors()
     {
         var list = new List<Transform>();
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
-            if (environmentAnchorTags.Any(tag => t.CompareTag(tag))) list.Add(t);
+            if (environmentAnchorTags.Any(anchorTag => t.CompareTag(anchorTag))) list.Add(t);
         return list;
     }
 
     // =====================================================================
     //   HELPERS GLOBAUX
     // =====================================================================
+    /// <summary>
+    /// Indique si une position se trouve à proximité d’une zone interdite (fenêtre, bloqueur).
+    /// </summary>
+    /// <param name="pos">Position monde à tester.</param>
+    /// <returns>Vrai si la zone est interdite pour le placement.</returns>
     private bool IsNearForbiddenZone(Vector3 pos)
     {
         foreach (var hit in Physics.OverlapSphere(pos, checkRadius))
@@ -353,11 +396,21 @@ public class PropPlacer : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Replace verticalement un objet sur le sol en projetant un rayon vers le bas.
+    /// </summary>
+    /// <param name="go">Objet à aligner sur le sol.</param>
     private void SnapToGround(GameObject go)
     {
         if (Physics.Raycast(go.transform.position + Vector3.up, Vector3.down, out var h, 5f)) go.transform.position = h.point;
     }
 
+    /// <summary>
+    /// Sélectionne un élément selon un poids relatif.
+    /// </summary>
+    /// <param name="items">Liste pondérée d’items.</param>
+    /// <param name="rng">Générateur pseudo‑aléatoire.</param>
+    /// <returns>Un élément de la liste, proportionnel à son poids.</returns>
     private static ClusterAsset WeightedPick(IList<ClusterAsset> items, System.Random rng)
     {
         float total = items.Sum(i => i.weight);
@@ -368,6 +421,12 @@ public class PropPlacer : MonoBehaviour
     
     
 
+    /// <summary>
+    /// Construit un masque booléen d’emprise à partir d’un <see cref="ClusterAsset"/>.
+    /// Utilise un rectangle plein si le masque texture n’est pas défini.
+    /// </summary>
+    /// <param name="asset">Définition du cluster.</param>
+    /// <returns>Masque 2D où true indique une cellule occupée.</returns>
     private static bool[,] FootprintToBool(ClusterAsset asset)
     {
         if (asset.useRectMask || asset.footprintMask == null)
@@ -409,6 +468,11 @@ public class PropPlacer : MonoBehaviour
         return mask;
     }
 
+    /// <summary>
+    /// Agrège les sous‑salles du générateur de partitions en données prêtes à consommer.
+    /// </summary>
+    /// <param name="pg">Générateur de partitions internes.</param>
+    /// <returns>Suite des sous‑salles (origine monde, taille, tag…).</returns>
     private IEnumerable<SubRoomData> GatherSubRooms(InternalPartitionGenerator pg)
     {
         foreach (var sr in pg.GetAllSubRooms())
@@ -421,16 +485,31 @@ public class PropPlacer : MonoBehaviour
     // =====================================================================
     //   STRUCTS / CLASSES INTERNES
     // =====================================================================
+    /// <summary>
+    /// Données d’une sous-salle du générateur (origine, taille et tag).
+    /// </summary>
     public struct SubRoomData
     {
         public int id; public Vector3 origin; public Vector2Int originCell; public Vector2Int size; public string tag;
     }
 
+    /// <summary>
+    /// Carte d’occupation de cellules pour éviter les collisions lors du placement.
+    /// </summary>
     public class SpatialMap
     {
         private readonly bool[,] vox; public SpatialMap(int sx, int sz) => vox = new bool[sx, sz];
+        /// <summary>
+        /// Indique si la cellule (x,z) est libre.
+        /// </summary>
         public bool IsFree(int x, int z) => !vox[x, z];
+        /// <summary>
+        /// Marque la cellule (x,z) comme occupée.
+        /// </summary>
         public void Mark(int x, int z)   => vox[x, z] = true;
+        /// <summary>
+        /// Vérifie si un masque peut être posé à partir de (gx,gz) sans chevauchement.
+        /// </summary>
         public bool Fits(bool[,] mask, int gx, int gz)
         {
             int w = mask.GetLength(0), h = mask.GetLength(1);
@@ -438,6 +517,9 @@ public class PropPlacer : MonoBehaviour
                 if (mask[ix, iz] && !IsFree(gx + ix, gz + iz)) return false;
             return true;
         }
+        /// <summary>
+        /// Applique (occupe) un masque à partir de (gx,gz).
+        /// </summary>
         public void Stamp(bool[,] mask, int gx, int gz)
         {
             int w = mask.GetLength(0), h = mask.GetLength(1);
@@ -446,8 +528,19 @@ public class PropPlacer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Générateur de points PoissonDisk (2D) pour un échantillonnage dispersé.
+    /// </summary>
     public static class PoissonDisk
     {
+        /// <summary>
+        /// Génère des points espacés d’au moins <paramref name="minDist"/> dans une zone.
+        /// </summary>
+        /// <param name="area">Dimensions de la zone (en cellules).</param>
+        /// <param name="minDist">Distance minimale entre deux points.</param>
+        /// <param name="rng">Générateur pseudo-aléatoire.</param>
+        /// <param name="maxAttempts">Nombre maximum d’essais avant arrêt.</param>
+        /// <returns>Liste de positions 2D en coordonnées de cellule.</returns>
         public static List<Vector2> Generate(Vector2Int area, float minDist, System.Random rng, int maxAttempts = 30)
         {
             List<Vector2> pts = new();
@@ -464,11 +557,15 @@ public class PropPlacer : MonoBehaviour
     }
 }
 
-// ========================================================================
-//   CLUE PROP TRACKER (statique)
-// ========================================================================
+/// <summary>
+/// Utilitaires pour marquer les props d’énigme comme « utilisés ».
+/// </summary>
 public static class CluePropTracker
 {
+    /// <summary>
+    /// Marque comme utilisé le prop lié à l’énigme d’identifiant donné.
+    /// </summary>
+    /// <param name="enigmaId">Identifiant unique de l’énigme.</param>
     public static void MarkUsed(string enigmaId)
     {
         var clue = PropPlacer.tempPlacedClues.FirstOrDefault(c => c.enigmaId == enigmaId);

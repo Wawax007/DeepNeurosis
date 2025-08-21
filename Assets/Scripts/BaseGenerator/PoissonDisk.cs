@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Générateur 2D de points espacés (Poisson Disk) pour échantillonnage décoratif.
+/// </summary>
 public static class PoissonDisk
 {
     public static List<Vector2> Generate(Vector2Int area, float minDist, System.Random rng, int maxAttempts = 30)
